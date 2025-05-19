@@ -1,1 +1,255 @@
 //improvements
+
+1. Factory pattern
+in below facade object:
+class UserFacade {
+public:
+    static void handleReaction(const string& followerId, const string& imageId, ReactionType reactionType) {
+        cout << "User " << followerId << " reacted to Image " << imageId << " with reaction " << static_cast<int>(reactionType) << ".\n";
+        Notification notification("n1", followerId, NotificationType::REACTED, "You have a new reaction", imageId);
+        NotificationService::sendNotification(notification);
+    }
+
+    static void handleComment(const string& followerId, const string& imageId, const string& commentDesc) {
+        cout << "User " << followerId << " commented on Image " << imageId << ": " << commentDesc << "\n";
+        Notification notification("n2", followerId, NotificationType::COMMENTED, "You have a new comment", imageId);
+        NotificationService::sendNotification(notification);
+    }
+
+    static void handleShare(const string& userId, const string& imageId) {
+        cout << "User " << userId << " shared Image " << imageId << ".\n";
+        Notification notification("n3", userId, NotificationType::SHARED, "Your image was shared", imageId);
+        NotificationService::sendNotification(notification);
+    }
+};
+
+you can see notification objects are getting created directly, suppose later we want to introduce some if else logic to create the object based on the input provided to handleReaction,
+handleCOmment etc, we will have to change all these 3 functions, so better we create a factory class for notification and create objectvia factory class:
+
+class NotificationFactory {
+public:
+    static Notification createNotification(const string& id, const string& notifiedUserId, NotificationType type, const string& message, const string& generatorId) {
+        return Notification(id, notifiedUserId, type, message, generatorId);
+    }
+};
+
+
+2. Observer pattern:
+   we can see that a user will be notified if any state chnage happens on image, so image is observable here.
+   hence we should create a imageObservable class which will have list of all observers and a notify() function to notify all of them, though in this questions requirement there will
+   we only 1 observer for a image which is the uploader himself, but later it can be possible that there will be multiple observers, ex if we want to notify all 1st degree followers.
+   also, whenever we can have different set of observers for a observable, use this pattern as below:
+
+   class ObservableImage {
+    unordered_set<string> observers;
+public:
+    void addObserver(const string& userId) {
+        observers.insert(userId);
+    }
+
+    void notifyObservers(const string& message) {
+        for (const auto& observer : observers) {
+            NotificationService::sendNotification(Notification("n1", observer, NotificationType::COMMENTED, message, "imageId"));
+        }
+    }
+};
+
+
+
+3. for service classes(classes that has functions which can be used by multiple entities) like imageService, AuthService etc, make them singleton  because they just have a function which can be
+   shared.to make a class singleton, create a static function inside class that return sttaic instance of that class and always create object by calling this function in other class.
+4. command pattern to track history, logs and maintain sequence etc.
+
+
+#include <iostream>
+#include <vector>
+#include <unordered_map>
+#include <unordered_set>
+#include <memory>
+#include <string>
+#include <ctime>
+
+using namespace std;
+
+/* ======================= Enums ======================= */
+enum class Role { ADMIN, USER };
+enum class ReactionType { LOVE, LIKE, LAUGH, HEART, KISS };
+enum class NotificationType { REACTED, SHARED, COMMENTED };
+
+/* ======================= Entities ======================= */
+class User {
+public:
+    string id;
+    string username;
+    string email;
+    Role role;
+    string profilePicId;
+
+    User(string id, string username, string email, Role role)
+        : id(id), username(username), email(email), role(role) {}
+};
+
+class Image {
+public:
+    string id;
+    string uploaderId;
+    string description;
+    vector<string> tags;
+    time_t uploadTime;
+    int likeCount = 0;
+    vector<string> reactionIds;
+    vector<string> commentIds;
+
+    Image(string id, string uploaderId, string description, vector<string> tags)
+        : id(id), uploaderId(uploaderId), description(description), tags(tags) {
+        uploadTime = time(nullptr);
+    }
+};
+
+/* ======================= Step 1: Factory Method Pattern ======================= */
+class Notification {
+public:
+    string id;
+    string notifiedUserId;
+    NotificationType type;
+    string message;
+    string generatorId;
+    time_t timestamp;
+
+    Notification(string id, string notifiedUserId, NotificationType type, string message, string generatorId)
+        : id(id), notifiedUserId(notifiedUserId), type(type), message(message), generatorId(generatorId) {
+        timestamp = time(nullptr);
+    }
+};
+
+class NotificationFactory {
+public:
+    static Notification createNotification(const string& id, const string& notifiedUserId, 
+                                           NotificationType type, const string& message, 
+                                           const string& generatorId) {
+        return Notification(id, notifiedUserId, type, message, generatorId);
+    }
+};
+
+/* ======================= Step 2: Singleton Pattern for Services ======================= */
+class AuthService {
+public:
+    static AuthService& getInstance() {
+        static AuthService instance;
+        return instance;
+    }
+
+    bool login(const User& user) {
+        cout << "User " << user.username << " logged in successfully.\n";
+        return true;
+    }
+
+    bool signup(const User& user) {
+        cout << "User " << user.username << " signed up successfully.\n";
+        return true;
+    }
+
+    bool OAuth() {
+        cout << "OAuth login successful.\n";
+        return true;
+    }
+
+private:
+    AuthService() = default;
+};
+
+class ImageService {
+public:
+    static ImageService& getInstance() {
+        static ImageService instance;
+        return instance;
+    }
+
+    void uploadImage(const Image& image) {
+        cout << "Image with ID " << image.id << " uploaded successfully.\n";
+    }
+
+    void shareImage(const Image& image) {
+        cout << "Image with ID " << image.id << " shared successfully.\n";
+    }
+
+    void deleteImage(const string& imageId) {
+        cout << "Image with ID " << imageId << " deleted successfully.\n";
+    }
+
+    void updateImage(const Image& image) {
+        cout << "Image with ID " << image.id << " updated successfully.\n";
+    }
+
+private:
+    ImageService() = default;
+};
+
+class NotificationService {
+public:
+    static NotificationService& getInstance() {
+        static NotificationService instance;
+        return instance;
+    }
+
+    void sendNotification(const Notification& notification) {
+        cout << "Notification sent to User " << notification.notifiedUserId 
+             << " with message: " << notification.message << "\n";
+    }
+
+private:
+    NotificationService() = default;
+};
+
+/* ======================= Step 3: Observer Pattern ======================= */
+class ObservableImage {
+    unordered_set<string> observers;
+
+public:
+    void addObserver(const string& userId) {
+        observers.insert(userId);
+    }
+
+    void removeObserver(const string& userId) {
+        observers.erase(userId);
+    }
+
+    void notifyObservers(const string& imageId, const string& message) {
+        for (const auto& observer : observers) {
+            Notification notification = NotificationFactory::createNotification("n1", observer, NotificationType::COMMENTED, message, imageId);
+            NotificationService::getInstance().sendNotification(notification);
+        }
+    }
+};
+
+/* ======================= Step 4: Facade Pattern ======================= */
+class ImageFacade {
+    ImageService& imageService = ImageService::getInstance();
+    NotificationService& notificationService = NotificationService::getInstance();
+    ObservableImage observableImage;
+
+public:
+    void upload(const Image& image) {
+        imageService.uploadImage(image);
+        observableImage.notifyObservers(image.id, "A new image has been uploaded.");
+    }
+
+    void share(const Image& image) {
+        imageService.shareImage(image);
+        observableImage.notifyObservers(image.id, "An image has been shared.");
+    }
+
+    void react(const string& userId, const string& imageId, ReactionType reaction) {
+        string reactionMessage = "User " + userId + " reacted with " + to_string(static_cast<int>(reaction));
+        observableImage.notifyObservers(imageId, reactionMessage);
+    }
+
+    void addObserver(const string& userId) {
+        observableImage.addObserver(userId);
+    }
+
+    void removeObserver(const string& userId) {
+        observableImage.removeObserver(userId);
+    }
+};
+
