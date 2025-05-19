@@ -132,32 +132,6 @@ public:
 };
 
 /* ======================= Step 2: Singleton Pattern for Services ======================= */
-class AuthService {
-public:
-    static AuthService& getInstance() {
-        static AuthService instance;
-        return instance;
-    }
-
-    bool login(const User& user) {
-        cout << "User " << user.username << " logged in successfully.\n";
-        return true;
-    }
-
-    bool signup(const User& user) {
-        cout << "User " << user.username << " signed up successfully.\n";
-        return true;
-    }
-
-    bool OAuth() {
-        cout << "OAuth login successful.\n";
-        return true;
-    }
-
-private:
-    AuthService() = default;
-};
-
 class ImageService {
 public:
     static ImageService& getInstance() {
@@ -173,83 +147,96 @@ public:
         cout << "Image with ID " << image.id << " shared successfully.\n";
     }
 
-    void deleteImage(const string& imageId) {
-        cout << "Image with ID " << imageId << " deleted successfully.\n";
-    }
-
-    void updateImage(const Image& image) {
-        cout << "Image with ID " << image.id << " updated successfully.\n";
+    void reactToImage(const string& userId, const string& imageId, ReactionType reaction) {
+        cout << "User " << userId << " reacted with " << static_cast<int>(reaction)
+             << " to Image " << imageId << ".\n";
     }
 
 private:
     ImageService() = default;
 };
 
-class NotificationService {
+/* ======================= Step 5: Command Pattern ======================= */
+class ICommand {
 public:
-    static NotificationService& getInstance() {
-        static NotificationService instance;
-        return instance;
-    }
-
-    void sendNotification(const Notification& notification) {
-        cout << "Notification sent to User " << notification.notifiedUserId 
-             << " with message: " << notification.message << "\n";
-    }
-
-private:
-    NotificationService() = default;
+    virtual void execute() = 0;
+    virtual ~ICommand() = default;
 };
 
-/* ======================= Step 3: Observer Pattern ======================= */
-class ObservableImage {
-    unordered_set<string> observers;
+class UploadImageCommand : public ICommand {
+    Image image;
 
 public:
-    void addObserver(const string& userId) {
-        observers.insert(userId);
+    UploadImageCommand(const Image& image) : image(image) {}
+
+    void execute() override {
+        ImageService::getInstance().uploadImage(image);
+    }
+};
+
+class ShareImageCommand : public ICommand {
+    Image image;
+
+public:
+    ShareImageCommand(const Image& image) : image(image) {}
+
+    void execute() override {
+        ImageService::getInstance().shareImage(image);
+    }
+};
+
+class ReactToImageCommand : public ICommand {
+    string userId;
+    string imageId;
+    ReactionType reaction;
+
+public:
+    ReactToImageCommand(const string& userId, const string& imageId, ReactionType reaction)
+        : userId(userId), imageId(imageId), reaction(reaction) {}
+
+    void execute() override {
+        ImageService::getInstance().reactToImage(userId, imageId, reaction);
+    }
+};
+
+/* ======================= Step 6: Command Invoker ======================= */
+class CommandInvoker {
+    vector<unique_ptr<ICommand>> commandQueue;
+
+public:
+    void addCommand(unique_ptr<ICommand> command) {
+        commandQueue.push_back(move(command));
     }
 
-    void removeObserver(const string& userId) {
-        observers.erase(userId);
-    }
-
-    void notifyObservers(const string& imageId, const string& message) {
-        for (const auto& observer : observers) {
-            Notification notification = NotificationFactory::createNotification("n1", observer, NotificationType::COMMENTED, message, imageId);
-            NotificationService::getInstance().sendNotification(notification);
+    void executeCommands() {
+        for (auto& command : commandQueue) {
+            command->execute();
         }
+        commandQueue.clear();
     }
 };
 
-/* ======================= Step 4: Facade Pattern ======================= */
-class ImageFacade {
-    ImageService& imageService = ImageService::getInstance();
-    NotificationService& notificationService = NotificationService::getInstance();
-    ObservableImage observableImage;
+/* ======================= Main ======================= */
+int main() {
+    // Create entities
+    Image image1("101", "1", "A beautiful sunset", {"sunset", "nature"});
+    Image image2("102", "2", "Mountain view", {"mountain", "landscape"});
 
-public:
-    void upload(const Image& image) {
-        imageService.uploadImage(image);
-        observableImage.notifyObservers(image.id, "A new image has been uploaded.");
-    }
+    // Initialize the invoker
+    CommandInvoker invoker;
 
-    void share(const Image& image) {
-        imageService.shareImage(image);
-        observableImage.notifyObservers(image.id, "An image has been shared.");
-    }
+    // Add commands to the invoker
+    invoker.addCommand(make_unique<UploadImageCommand>(image1));
+    invoker.addCommand(make_unique<ShareImageCommand>(image1));
+    invoker.addCommand(make_unique<ReactToImageCommand>("1", "101", ReactionType::LOVE));
+    
+    invoker.addCommand(make_unique<UploadImageCommand>(image2));
+    invoker.addCommand(make_unique<ShareImageCommand>(image2));
+    invoker.addCommand(make_unique<ReactToImageCommand>("2", "102", ReactionType::HEART));
 
-    void react(const string& userId, const string& imageId, ReactionType reaction) {
-        string reactionMessage = "User " + userId + " reacted with " + to_string(static_cast<int>(reaction));
-        observableImage.notifyObservers(imageId, reactionMessage);
-    }
+    // Execute all commands
+    invoker.executeCommands();
 
-    void addObserver(const string& userId) {
-        observableImage.addObserver(userId);
-    }
-
-    void removeObserver(const string& userId) {
-        observableImage.removeObserver(userId);
-    }
-};
+    return 0;
+}
 
