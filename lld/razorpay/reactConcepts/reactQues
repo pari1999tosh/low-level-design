@@ -338,4 +338,49 @@ func.call(jsun,"India")
   }
 }
 
+19.  calculator class with method chaining
+class Calculator {
+  constructor(initialValue = 0) {
+    this.value = initialValue;
+    this.queue = Promise.resolve(); // used for chaining async & sync ops
+  }
+
+  _enqueue(fn) {
+    this.queue = this.queue.then(() => fn());
+    return this;
+  }
+
+  add(num) {
+    return this._enqueue(() => {
+      this.value += num;
+    });
+  }
+
+  sub(num) {
+    return this._enqueue(() => {
+      this.value -= num;
+    });
+  }
+
+  mul(num) {
+    return this._enqueue(() => {
+      this.value *= num;
+    });
+  }
+
+  delay(ms) {
+    return this._enqueue(() => new Promise(resolve => {
+      console.log(`⏳ Waiting for ${ms}ms`);
+      setTimeout(resolve, ms);
+    }));
+  }
+
+  equals(callback) {
+    this._enqueue(() => {
+      callback(this.value);
+    });
+  }
+}
+
+
   
