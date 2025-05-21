@@ -1,0 +1,358 @@
+import { useState, useEffect, useCallback, memo, Suspense } from 'react';
+import _ from 'lodash';
+
+// Utility for API requests with retry logic
+const fetchWithRetry = async (url, options = {}, retries = 3, backoff = 300) => {
+  try {
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      throw new Error(`Request failed with status ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    if (retries === 0) {
+      throw error;
+    }
+    console.log(`Retrying request to ${url} in ${backoff}ms...`);
+    await new Promise(resolve => setTimeout(resolve, backoff));
+    return fetchWithRetry(url, options, retries - 1, backoff * 2);
+  }
+};
+
+// Reusable Form Field Component
+const FormField = memo(({ label, type, value, onChange, options = [], isMulti = false, error }) => {
+  if (type === 'select') {
+    if (isMulti) {
+      return (
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">{label}</label>
+          <select 
+            multiple 
+            className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            value={value || []}
+            onChange={(e) => {
+              const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+              onChange(selectedOptions);
+            }}
+          >
+            {options.map(option => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+          {error && <p className="text-red-500 text-xs italic">{error}</p>}
+          <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple options</p>
+        </div>
+      );
+    }
+    return (
+      <div className="mb-4">
+        <label className="block text-gray-700 text-sm font-bold mb-2">{label}</label>
+        <select 
+          className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          <option value="">Select {label}</option>
+          {options.map(option => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        {error && <p className="text-red-500 text-xs italic">{error}</p>}
+      </div>
+    );
+  }
+  
+  return (
+    <div className="mb-4">
+      <label className="block text-gray-700 text-sm font-bold mb-2">{label}</label>
+      <input 
+        type={type} 
+        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+        value={value || (type === 'number' ? '' : '')}
+        onChange={(e) => onChange(e.target.value)}
+        min={type === 'number' ? 0 : undefined}
+      />
+      {error && <p className="text-red-500 text-xs italic">{error}</p>}
+    </div>
+  );
+});
+
+// Lazy loaded form sections
+const PersonalInfoSection = memo(({ formData, handleChange, errors, countries, isLoading }) => {
+  if (isLoading) {
+    return <div className="text-center py-4">Loading countries...</div>;
+  }
+  
+  return (
+    <div className="p-4 border rounded-lg bg-gray-50">
+      <h3 className="text-lg font-semibold mb-4">Personal Information</h3>
+      <FormField 
+        label="Name" 
+        type="text" 
+        value={formData.name} 
+        onChange={(value) => handleChange('name', value)}
+        error={errors.name}
+      />
+      <FormField 
+        label="Age" 
+        type="number" 
+        value={formData.age} 
+        onChange={(value) => handleChange('age', value)}
+        error={errors.age}
+      />
+      <FormField 
+        label="Country" 
+        type="select" 
+        value={formData.country} 
+        onChange={(value) => handleChange('country', value)}
+        options={countries}
+        error={errors.country}
+      />
+    </div>
+  );
+});
+
+const JobDetailsSection = memo(({ formData, handleChange, errors, skills, isLoading }) => {
+  if (isLoading) {
+    return <div className="text-center py-4">Loading skills...</div>;
+  }
+  
+  return (
+    <div className="p-4 border rounded-lg bg-gray-50">
+      <h3 className="text-lg font-semibold mb-4">Job Details</h3>
+      <FormField 
+        label="Company" 
+        type="text" 
+        value={formData.company} 
+        onChange={(value) => handleChange('company', value)}
+        error={errors.company}
+      />
+      <FormField 
+        label="Years of Experience" 
+        type="number" 
+        value={formData.yearsOfExperience} 
+        onChange={(value) => handleChange('yearsOfExperience', value)}
+        error={errors.yearsOfExperience}
+      />
+      <FormField 
+        label="Skills" 
+        type="select" 
+        value={formData.skills} 
+        onChange={(value) => handleChange('skills', value)}
+        options={skills}
+        isMulti={true}
+        error={errors.skills}
+      />
+    </div>
+  );
+});
+
+// Main Form Component
+export default function Counter() {
+  const [formSection, setFormSection] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    age: '',
+    country: '',
+    company: '',
+    yearsOfExperience: '',
+    skills: []
+  });
+  const [errors, setErrors] = useState({});
+  
+  const [countries, setCountries] = useState([]);
+  const [skills, setSkills] = useState([]);
+  const [isLoadingCountries, setIsLoadingCountries] = useState(false);
+  const [isLoadingSkills, setIsLoadingSkills] = useState(false);
+  const [countriesError, setCountriesError] = useState(null);
+  const [skillsError, setSkillsError] = useState(null);
+
+  // Handle form change
+  const handleChange = useCallback((field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Clear validation error when field is updated
+    if (errors[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+  }, [errors]);
+
+  // Fetch countries
+  const fetchCountries = useCallback(async () => {
+    setIsLoadingCountries(true);
+    setCountriesError(null);
+    try {
+      const data = await fetchWithRetry('https://restcountries.com/v3.1/all');
+      const formattedCountries = data.map(country => ({
+        value: country.cca3,
+        label: country.name.common
+      })).sort((a, b) => a.label.localeCompare(b.label));
+      setCountries(formattedCountries);
+    } catch (error) {
+      console.error('Error fetching countries:', error);
+      setCountriesError('Failed to load countries. Please try again.');
+    } finally {
+      setIsLoadingCountries(false);
+    }
+  }, []);
+
+  // Fetch skills
+  const fetchSkills = useCallback(async () => {
+    setIsLoadingSkills(true);
+    setSkillsError(null);
+    try {
+      const data = await fetchWithRetry('https://mocki.io/v1/ceab9b9b-f8f3-4d2b-9910-ea5c9c4265d3');
+      const formattedSkills = data.map(skill => ({
+        value: skill.id.toString(),
+        label: skill.name
+      }));
+      setSkills(formattedSkills);
+    } catch (error) {
+      console.error('Error fetching skills:', error);
+      setSkillsError('Failed to load skills. Please try again.');
+    } finally {
+      setIsLoadingSkills(false);
+    }
+  }, []);
+
+  // Validate form
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (formSection === 'Personal Info') {
+      if (!formData.name.trim()) newErrors.name = 'Name is required';
+      if (!formData.age) newErrors.age = 'Age is required';
+      if (formData.age && (formData.age < 18 || formData.age > 100)) newErrors.age = 'Age must be between 18 and 100';
+      if (!formData.country) newErrors.country = 'Country is required';
+    } else if (formSection === 'Job Details') {
+      if (!formData.company.trim()) newErrors.company = 'Company is required';
+      if (!formData.yearsOfExperience) newErrors.yearsOfExperience = 'Years of experience is required';
+      if (formData.yearsOfExperience && formData.yearsOfExperience < 0) {
+        newErrors.yearsOfExperience = 'Years of experience cannot be negative';
+      }
+      if (!formData.skills || formData.skills.length === 0) newErrors.skills = 'At least one skill is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Handle form submission
+  const handleSubmit = (e) => {
+    if (e) e.preventDefault();
+    
+    if (validateForm()) {
+      console.log('Form submitted:', formData);
+      alert('Form submitted successfully!\n\n' + JSON.stringify(formData, null, 2));
+    }
+  };
+
+  // Retry button handlers
+  const handleRetryCountries = () => {
+    fetchCountries();
+  };
+
+  const handleRetrySkills = () => {
+    fetchSkills();
+  };
+
+  // Load data when component mounts
+  useEffect(() => {
+    if (formSection === 'Personal Info') {
+      fetchCountries();
+    } else if (formSection === 'Job Details') {
+      fetchSkills();
+    }
+  }, [formSection, fetchCountries, fetchSkills]);
+
+  return (
+    <div className="max-w-lg mx-auto p-4">
+      <h2 className="text-xl font-bold mb-6">Dynamic Form</h2>
+      
+      <div>
+        <FormField 
+          label="Form Section" 
+          type="select" 
+          value={formSection} 
+          onChange={setFormSection}
+          options={[
+            { value: 'Personal Info', label: 'Personal Info' },
+            { value: 'Job Details', label: 'Job Details' }
+          ]}
+        />
+        
+        {formSection && (
+          <Suspense fallback={<div className="text-center py-4">Loading form section...</div>}>
+            {formSection === 'Personal Info' && (
+              <>
+                {countriesError ? (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded mb-4">
+                    <p className="text-red-600 mb-2">{countriesError}</p>
+                    <button 
+                      type="button"
+                      onClick={handleRetryCountries}
+                      className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : (
+                  <PersonalInfoSection 
+                    formData={formData} 
+                    handleChange={handleChange} 
+                    errors={errors} 
+                    countries={countries}
+                    isLoading={isLoadingCountries} 
+                  />
+                )}
+              </>
+            )}
+            
+            {formSection === 'Job Details' && (
+              <>
+                {skillsError ? (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded mb-4">
+                    <p className="text-red-600 mb-2">{skillsError}</p>
+                    <button 
+                      type="button"
+                      onClick={handleRetrySkills}
+                      className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : (
+                  <JobDetailsSection 
+                    formData={formData} 
+                    handleChange={handleChange} 
+                    errors={errors} 
+                    skills={skills}
+                    isLoading={isLoadingSkills} 
+                  />
+                )}
+              </>
+            )}
+          </Suspense>
+        )}
+        
+        {formSection && (
+          <div className="mt-6">
+            <button 
+              type="button" 
+              onClick={handleSubmit}
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+            >
+              Submit
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
