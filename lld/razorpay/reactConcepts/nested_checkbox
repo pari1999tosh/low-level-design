@@ -1,0 +1,112 @@
+import React, { useState } from "react";
+
+const initialData = [
+  {
+    id: 1,
+    label: "Parent 1",
+    checked: false,
+    children: [
+      {
+        id: 2,
+        label: "Child 1.1",
+        checked: false,
+        children: [
+          {
+            id: 3,
+            label: "Grandchild 1.1.1",
+            checked: false,
+          },
+        ],
+      },
+      {
+        id: 4,
+        label: "Child 1.2",
+        checked: false,
+      },
+    ],
+  },
+  {
+    id: 5,
+    label: "Parent 2",
+    checked: false,
+  },
+];
+
+export default function App() {
+  const [tree, setTree] = useState(initialData);
+
+  const updateCheckStatus = (node, checked) => {
+    return {
+      ...node,
+      checked,
+      children: node.children
+        ? node.children.map((child) => updateCheckStatus(child, checked))
+        : undefined,
+    };
+  };
+
+  const handleCheck = (nodeId, checked, nodes) => {
+    return nodes.map((node) => {
+      if (node.id === nodeId) {
+        return updateCheckStatus(node, checked);
+      }
+
+      if (node.children) {
+        return {
+          ...node,
+          children: handleCheck(nodeId, checked, node.children),
+        };
+      }
+
+      return node;
+    });
+  };
+
+  const onCheckboxChange = (id, checked) => {
+    const updatedTree = handleCheck(id, checked, tree);
+    setTree(updatedTree);
+  };
+
+  const TreeNode = ({ node, level = 0, onCheckboxChange }) => {
+    return (
+        <div>
+            <div style={{ marginLeft: `${level * 20}px` }}>
+                <label>
+                    <input
+                        type="checkbox"
+                        checked={node.checked}
+                        onChange={(e) => onCheckboxChange(node.id, e.target.checked)}
+                    />
+                    {node.label}
+                </label>
+            </div>
+            {node.children && node.children.length > 0 && (
+                <div>
+                    {node.children.map((child) => (
+                        <TreeNode
+                            key={child.id}
+                            node={child}
+                            level={level + 1}
+                            onCheckboxChange={onCheckboxChange}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+  };
+
+  return (
+    <div>
+      <h2>Nested Checkbox Tree</h2>
+      {tree.map((node) => (
+        <TreeNode 
+          key={node.id} 
+          node={node} 
+          level={0}
+          onCheckboxChange={onCheckboxChange}
+        />
+      ))}
+    </div>
+  );
+}
