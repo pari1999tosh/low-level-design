@@ -1,0 +1,9 @@
+https://datalemur.com/blog/nutanix-sql-interview-questions
+
+
+1.correlated and non correlated queries
+  - correlated: when inner query can't run independently and references a outer query column. ex: find the records where the sale of customer is > his average
+  - in this case inner query will calculate the average for each customer and outer query filters each row based on sales > avg sales.
+
+  - non-correlated queries: inner query calculates total avg and outer query just filter if sales > avg.
+
