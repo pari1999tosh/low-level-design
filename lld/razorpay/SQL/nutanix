@@ -7,3 +7,7 @@ https://datalemur.com/blog/nutanix-sql-interview-questions
 
   - non-correlated queries: inner query calculates total avg and outer query just filter if sales > avg.
 
+2. 1NF: no column should have array or values.
+   2NF: non key column should depend on complete primary key, not partial columns of PK.
+   3NF: non key column should not depend on non key column
+
