@@ -1,0 +1,183 @@
+// Memento class - stores the state snapshot
+class GameSave {
+    private final int level;
+    private final int score;
+    private final int health;
+    private final String playerName;
+    private final int[] inventory;
+    
+    public GameSave(int level, int score, int health, String playerName, int[] inventory) {
+        this.level = level;
+        this.score = score;
+        this.health = health;
+        this.playerName = playerName;
+        this.inventory = inventory.clone(); // Deep copy to avoid external modification
+    }
+    
+    // Getters for restoring state
+    public int getLevel() { return level; }
+    public int getScore() { return score; }
+    public int getHealth() { return health; }
+    public String getPlayerName() { return playerName; }
+    public int[] getInventory() { return inventory.clone(); }
+}
+
+// Originator class - the object whose state we want to save
+class GameState {
+    private int level;
+    private int score;
+    private int health;
+    private String playerName;
+    private int[] inventory;
+    
+    public GameState(String playerName) {
+        this.playerName = playerName;
+        this.level = 1;
+        this.score = 0;
+        this.health = 100;
+        this.inventory = new int[10]; // Empty inventory
+    }
+    
+    // Methods to modify game state
+    public void levelUp() {
+        level++;
+        health = 100; // Restore health on level up
+        System.out.println("Level up! Now at level " + level);
+    }
+    
+    public void addScore(int points) {
+        score += points;
+        System.out.println("Score increased by " + points + ". Total: " + score);
+    }
+    
+    public void takeDamage(int damage) {
+        health -= damage;
+        if (health < 0) health = 0;
+        System.out.println("Took " + damage + " damage. Health: " + health);
+    }
+    
+    public void addItem(int itemId) {
+        for (int i = 0; i < inventory.length; i++) {
+            if (inventory[i] == 0) {
+                inventory[i] = itemId;
+                System.out.println("Added item " + itemId + " to inventory");
+                break;
+            }
+        }
+    }
+    
+    // Create memento - save current state
+    public GameSave createSave() {
+        System.out.println("Game saved!");
+        return new GameSave(level, score, health, playerName, inventory);
+    }
+    
+    // Restore from memento - load saved state
+    public void loadSave(GameSave save) {
+        this.level = save.getLevel();
+        this.score = save.getScore();
+        this.health = save.getHealth();
+        this.inventory = save.getInventory();
+        System.out.println("Game loaded! Level: " + level + ", Score: " + score + ", Health: " + health);
+    }
+    
+    public void displayStatus() {
+        System.out.println("=== Game Status ===");
+        System.out.println("Player: " + playerName);
+        System.out.println("Level: " + level);
+        System.out.println("Score: " + score);
+        System.out.println("Health: " + health);
+        System.out.print("Inventory: ");
+        for (int item : inventory) {
+            if (item != 0) System.out.print(item + " ");
+        }
+        System.out.println("\n");
+    }
+}
+
+// Caretaker class - manages the mementos
+class SaveManager {
+    private GameSave quickSave;
+    private GameSave[] saveSlots;
+    
+    public SaveManager() {
+        saveSlots = new GameSave[3]; // 3 save slots
+    }
+    
+    public void quickSave(GameState game) {
+        quickSave = game.createSave();
+        System.out.println("Quick save created!");
+    }
+    
+    public void quickLoad(GameState game) {
+        if (quickSave != null) {
+            game.loadSave(quickSave);
+            System.out.println("Quick save loaded!");
+        } else {
+            System.out.println("No quick save found!");
+        }
+    }
+    
+    public void saveToSlot(GameState game, int slot) {
+        if (slot >= 0 && slot < saveSlots.length) {
+            saveSlots[slot] = game.createSave();
+            System.out.println("Game saved to slot " + (slot + 1));
+        }
+    }
+    
+    public void loadFromSlot(GameState game, int slot) {
+        if (slot >= 0 && slot < saveSlots.length && saveSlots[slot] != null) {
+            game.loadSave(saveSlots[slot]);
+            System.out.println("Game loaded from slot " + (slot + 1));
+        } else {
+            System.out.println("No save found in slot " + (slot + 1));
+        }
+    }
+}
+
+// Example usage
+public class MementoGameExample {
+    public static void main(String[] args) {
+        // Create game and save manager
+        GameState game = new GameState("Player1");
+        SaveManager saveManager = new SaveManager();
+        
+        // Initial state
+        game.displayStatus();
+        
+        // Play the game a bit
+        game.addScore(100);
+        game.addItem(5); // Add sword
+        game.addItem(3); // Add potion
+        game.levelUp();
+        
+        game.displayStatus();
+        
+        // Save the game
+        saveManager.saveToSlot(game, 0);
+        saveManager.quickSave(game);
+        
+        // Continue playing
+        game.addScore(200);
+        game.takeDamage(30);
+        game.levelUp();
+        game.addItem(7); // Add shield
+        
+        System.out.println("After more gameplay:");
+        game.displayStatus();
+        
+        // Load previous save
+        System.out.println("Loading previous save...");
+        saveManager.loadFromSlot(game, 0);
+        game.displayStatus();
+        
+        // Play more and use quick save/load
+        game.takeDamage(50);
+        System.out.println("After taking damage:");
+        game.displayStatus();
+        
+        System.out.println("Loading quick save...");
+        saveManager.quickLoad(game);
+        game.displayStatus();
+    }
+}
