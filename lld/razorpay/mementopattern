@@ -1,4 +1,31 @@
 // Memento class - stores the state snapshot
+
+// Online Java Compiler
+// Use this editor to write, compile and run your Java code online
+memento design pattern:
+1.state save class(momento class, it saves the moments)
+1.gameSave class that has the state variable such as level, health,score,invntory
+2.getters of these states.
+3.constructore that can store these states
+
+2.actual gameState class (the class whose moments are captured)
+-has methods to update game states and has 2 memento
+1. memento to save a state: this function return gameSave object
+2.memnto to load a state, this function excepts a gameSave object
+3.displaystatus functions
+
+3. caretaker class/manager class
+1.it has quickSave object and list of saved games objects in a list called slots.
+2.just like in sanandreas, we can quick save the game by clicking on file icon,
+3.this class will save current game into quicksave.
+4.this class also has loadsave option that loads the quicksaved game.
+5.save in slot option is also there, that can save the game in slot
+6.load from slot function
+
+
+
+
+
 class GameSave {
     private final int level;
     private final int score;
