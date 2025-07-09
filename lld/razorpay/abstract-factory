@@ -1,0 +1,144 @@
+whenever we have no of related classes that can be grouped together and we are creating objects of these classes based on some if/else condition on user input, we can avoid if/else logic 
+using factory/abstract factory pattern.
+
+scenario:
+1.suppose there are 4 classes:
+ - ShreyanshJainLLD()
+ - SHreyanshJainHLD()
+ - GauravSenLLD()
+ - GauravSenHLD()
+
+
+input:
+  instrcutor: shreyansh/Gaurav
+  course:   LLD/HLD
+
+if(instructor == Shreyansh){
+  if(course == LLD){
+    return new ShreyanshJainLLD()
+  }else if(course == HLD){
+    return new ShreyanshJainHLD()
+  }
+}else if(instructor == Gaurav){
+  if(course == LLD){
+    return new GauravSenLLD()
+  }else if(course == HLD){
+    return new GauravSenHLD()
+  }
+}
+
+problems:
+1. suppose if this code is used in multiple places, if there is logic change or a new instructor or course comes, we will have to edit everywhere.
+2. client needs to know all these 4 classes.we are exposing internal details.
+
+solution:
+1.we can expose a factory to user and that factory will have functions that can return the object of parituclar classes in below manner:
+2. abstract entities:
+   public Interface LLD {
+     void codeEditor();
+   }
+
+   public Interface HLD {
+     void diagramCanvas();
+   }
+
+3.concrete entities
+  public class ShreyanshJainLLD implements LLD {
+    @Override
+    public void codeEditor(){
+      S.O.P("opening vs code for shreyansh ")
+    }
+  }
+
+  public class ShreyanshJainHLD implements HLD {
+    @Override
+    public void diagramCanvas(){
+      S.O.P("opening lucide chart  for shreyansh ")
+    }
+  }
+
+  public class GauravSenLLD implements LLD {
+    @Override
+    public void codeEditor(){
+      S.O.P("opening Sublime text for Gaurav ")
+    }
+  }
+
+  public class GauravSenHLD implements HLD {
+    @Override
+    public void diagramCanvas(){
+      S.O.P("opening Excalidraw chart  for Gaurav ")
+    }
+  }
+
+4.public Interface courseFactory {
+    HLD  createHLD();
+    LLD  createLLD();
+  }
+
+5.public class ShreyanshFactory implements courseFactory {
+   @Override
+   HLD createHLD(){
+    return new ShreyanshJainHLD()
+   }
+
+   @Override
+   LLD createLLD(){
+    return new ShreyanshJainLLD()
+   }
+  }
+
+6. public class GauravFactory implements courseFactory {
+   @Override
+   HLD createHLD(){
+    return new GauravSenHLD()
+   }
+
+   @Override
+   LLD createLLD(){
+    return new GauravSenLLD()
+   }
+  }
+
+
+
+
+7.main
+  public class Udemy {
+    public static void main(String[] args) {
+        String userPreference = "Shreyansh"; // You can change this to "Gaurav"
+
+        CourseFactory factory;
+
+        switch (userPreference.toLowerCase()) {
+            case "shreyansh":
+                factory = new ShreyanshFactory();
+                break;
+            case "gaurav":
+                factory = new GauravFactory();
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported cuisine type: " + userPreference);
+        }
+
+        LLD lld = factory.createLLD();
+        HLD HLD = factory.createHLD();
+
+        lld.codeEditor();
+        HLD.diagramCanvas();
+    }
+}
+
+
+
+
+ratne ka tarika:
+1. the deciding factors in the if/else condition were 2(instructor and course):
+2.so we created two factories for instrutors and a each of them will have two methods, createLLD() and createHLD()
+3.if there were only one deciding factors, suppose if instructor is Gaurav, create HLD, if Shreyansh, create LLD.
+4.we would have created only one factory called course which would have a function called createCourse().
+5.similarly if there were 3 level of nesting, let's say beginner/advanced
+6.we would have created two factories called beginner and advanced, which will have two functions that returns shreyanshFactory and GauravFactory,
+  now shreyanshfactory and gauravFactory will further have two functions createLLD() and createHLD()
+
+  
