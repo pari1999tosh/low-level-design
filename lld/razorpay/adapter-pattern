@@ -1,0 +1,43 @@
+1.usage: suppose you have an interface like notifer like below:
+      public interface Notifier {
+          void send(String message, String recipient);
+      }
+2. suppose you have two classes, emailNotifer and smsNotifer that implements this interface :
+   public class EmailNotifier implements Notifier {
+      @Override
+      public void send(String message, String recipient) {
+          System.out.println("Sending EMAIL to " + recipient + ": " + message);
+      }
+  }
+3. public class SMSNotifier implements Notifier {
+      @Override
+      public void send(String message, String recipient) {
+          System.out.println("Sending SMS to " + recipient + ": " + message);
+      }
+  }
+4.now suppose you find a legacy class for sending slacknotifications,but it's method name is different then "send" or the arguement list if different:
+  public class SlackService {
+      public void sendSlackMessage(String userId, String slackText) {
+          System.out.println("Sending SLACK message to " + userId + ": " + slackText);
+      }
+  }
+
+5.above class can't implement the notifier interface because method name is different then "send" or the arguement list if different.
+6.to adjust this legacy code, we need to create an adapter for the class as below:
+  public class SlackAdapter implements Notifier {
+      private SlackService slackService;
+  
+      public SlackAdapter() {
+          this.slackService = new SlackService();
+      }
+  
+      @Override
+      public void send(String message, String recipient) {
+          // recipient is Slack user ID
+          slackService.sendSlackMessage(recipient, message);
+      }
+  }
+
+7. this adapter implements the Notifer interface and it holds reference to slackNotifer class, inside overridden function, you call the function:slackService.sendSlackMessage(recipient, message);
+
+
