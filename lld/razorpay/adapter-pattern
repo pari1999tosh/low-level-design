@@ -40,4 +40,16 @@
 
 7. this adapter implements the Notifer interface and it holds reference to slackNotifer class, inside overridden function, you call the function:slackService.sendSlackMessage(recipient, message);
 
+8.Benefits:
+  1. legacy code remains untouched.
+  2. maintainability of code.
+  3. scalability at code level.
+
+Ratne ke tareeke:
+1. whenever there is a requirement of adapting a legacy class with a new interface without modifying the legacy code, we have to use adpater design pattern.
+2.idenfity the legacy class and call it adaptee class
+3.create an adapter class for this legacy class.
+4.this adapter will have reference to/object of adaptee class.
+5.this adapter will become concrete class of base/new interface and it will override the fucntion of base/new interface.
+6.from inside this overriden function, it will call the original function of adaptee class.
 
