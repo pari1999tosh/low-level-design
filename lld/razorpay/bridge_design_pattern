@@ -1,0 +1,119 @@
+1.It is used to avoid combinatorial explosion of classes.
+2.always avoid mixing the "what is to be done" and "how it is supposed to be done".
+3.let's take an example of notification system that we used for adapter design pattern.
+4.suppose you have different type of notification like alert,reminder, bankTransaction->this resembles to "what" in point 2.
+5.suppose you have multiple medium to send notification like email,sms,slack.
+6.usually you will create 3X3=9 classes as below:
+  - reminder with email
+  - reminder with sms
+  - reminder with slack
+  - alert with email
+  - alert with sms
+  - alert with slack
+  - bankTransaction with email
+  - bankTransaction  with sms
+  - bankTransaction  with slack
+
+7. with the help of bridge design pattern , you will segregate the how(sender medium) and what(type of notification).
+8.we will create an interface for "what" as below
+  public interface Notification {
+      void notifyUser(String message);
+  }
+9.concrete classes for various type of notification :
+  public class AlertNotification implements Notification {
+      private final NotificationSender sender;
+  
+      public AlertNotification(NotificationSender sender) {
+          this.sender = sender;
+      }
+  
+      @Override
+      public void notifyUser(String message) {
+          System.out.print("ALERT: ");
+          sender.send(message);
+      }
+  }
+
+  public class TransactionNotification implements Notification {
+      private final NotificationSender sender;
+  
+      public TransactionNotification(NotificationSender sender) {
+          this.sender = sender;
+      }
+  
+      @Override
+      public void notifyUser(String message) {
+          System.out.print("ALERT: ");
+          sender.send(message);
+      }
+  }
+  
+  public class ReminderNotification implements Notification {
+      private final NotificationSender sender;
+  
+      public ReminderNotification(NotificationSender sender) {
+          this.sender = sender;
+      }
+  
+      @Override
+      public void notifyUser(String message) {
+          System.out.print("REMINDER: ");
+          sender.send(message);
+      }
+  }
+
+
+
+  10. now we will have an interface for "how", that is notfication sending medium:
+      public interface NotificationSender {
+          void send(Notification notification);
+      }
+
+  11. various concrete classes for email,sms,slack mediums
+      public class EmailSender implements NotificationSender {
+          @Override
+          public void send(String message) {
+              System.out.println("Sending EMAIL: " + message);
+          }
+      }
+      
+      public class SMSSender implements NotificationSender {
+          @Override
+          public void send(String message) {
+              System.out.println("Sending SMS: " + message);
+          }
+      }
+      
+      public class SlackSender implements NotificationSender {
+          @Override
+          public void send(String message) {
+              System.out.println("Sending SLACK: " + message);
+          }
+      }
+
+  12. below is the client code:
+      public class NotificationClient {
+          public static void main(String[] args) {
+              Notification alertViaEmail = new AlertNotification(new EmailSender());
+              Notification reminderViaSMS = new ReminderNotification(new SMSSender());
+              Notification alertViaSlack = new AlertNotification(new SlackSender());
+      
+              alertViaEmail.notifyUser("Disk space low on server");
+              reminderViaSMS.notifyUser("Daily standup at 9 AM");
+              alertViaSlack.notifyUser("Code deployed to staging");
+          }
+      }
+
+  13. as you can see in above client code, we simply pass "how" to "what" object and we only need 6 concrete classes.
+
+  conclusion:
+  1. No combinatorial explosion of classes.
+  2. segregation of what and how.(feature and functionality)
+  3. suppose a new functionality comes that support all these features, we just need one more class that implements functionaloty interface.
+  4. code is more maintainable/ scalable.
+
+
+
+
+
+  
