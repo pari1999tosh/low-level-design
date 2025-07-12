@@ -1,0 +1,155 @@
+1.whenever there is a class which has lot of optional data members and there are multiple combinatorial possibilities for creating objects
+2.we need to overload lot of constrcutors, this overloading of mulitple constructors will become very messy.
+to avoid this we use builder pattern.
+steps are as followed:
+ - build a builder class which will have all data members of original class.
+ - this builder class will have a function for each datamember and return the reference to "this".
+ - on the client side, you can simple create an object using default constrcutor of this builder class and keep on adding optional
+   paremeters as per your needs.
+ - we will take an example of Human body:
+    public class HumanBody {
+        // Required
+        private final String name;
+        private final String gender;
+    
+        // Optional
+        private final boolean biceps;
+        private final boolean triceps;
+        private final boolean shoulders;
+        private final boolean chest;
+        private final boolean forearms;
+        private final boolean calves;
+        private final boolean breast;
+    
+        // 🔒 Private constructor
+        private HumanBody(Builder builder) {
+            this.name = builder.name;
+            this.gender = builder.gender;
+            this.biceps = builder.biceps;
+            this.triceps = builder.triceps;
+            this.shoulders = builder.shoulders;
+            this.chest = builder.chest;
+            this.forearms = builder.forearms;
+            this.calves = builder.calves;
+            this.breast = builder.breast;
+        }
+    
+        // 🧱 Builder class
+        public static class Builder {
+            private final String name;
+            private final String gender;
+    
+            private boolean biceps = false;
+            private boolean triceps = false;
+            private boolean shoulders = false;
+            private boolean chest = false;
+            private boolean forearms = false;
+            private boolean calves = false;
+            private boolean breast = false;
+    
+            public Builder(String name, String gender) {
+                this.name = name;
+                this.gender = gender;
+            }
+    
+            public Builder biceps() {
+                this.biceps = true;
+                return this;
+            }
+    
+            public Builder triceps() {
+                this.triceps = true;
+                return this;
+            }
+    
+            public Builder shoulders() {
+                this.shoulders = true;
+                return this;
+            }
+    
+            public Builder chest() {
+                this.chest = true;
+                return this;
+            }
+    
+            public Builder forearms() {
+                this.forearms = true;
+                return this;
+            }
+    
+            public Builder calves() {
+                this.calves = true;
+                return this;
+            }
+    
+            public Builder breast() {
+                this.breast = true;
+                return this;
+            }
+    
+            public HumanBody build() {
+                return new HumanBody(this);
+            }
+        }
+    
+        @Override
+        public String toString() {
+            return "HumanBody {" +
+                    "name='" + name + '\'' +
+                    ", gender='" + gender + '\'' +
+                    ", biceps=" + biceps +
+                    ", triceps=" + triceps +
+                    ", shoulders=" + shoulders +
+                    ", chest=" + chest +
+                    ", forearms=" + forearms +
+                    ", calves=" + calves +
+                    ", breast=" + breast +
+                    '}';
+        }
+    }
+
+
+    client code is below:
+
+    public class Main {
+    public static void main(String[] args) {
+        HumanBody bodybuilder = new HumanBody.Builder("Arnold", "Male")
+                .biceps()
+                .triceps()
+                .shoulders()
+                .chest()
+                .forearms()
+                .calves()
+                .build();
+
+        HumanBody sprinter = new HumanBody.Builder("Usain", "Male")
+                .calves()
+                .shoulders()
+                .build();
+
+        HumanBody yogaPractitioner = new HumanBody.Builder("Alia", "Female")
+                .breast()
+                .build();
+
+        System.out.println(bodybuilder);
+        System.out.println(sprinter);
+        System.out.println(yogaPractitioner);
+    }
+}
+
+
+ratne ke tareeke:
+1. create a nested class inside original class
+2.the constrcutor of original class will now take an object of builder class
+3.inside builder class, all the default and optional parameteres will be present.
+4.the cosntrcutor of builder class will initialize only default paremeters/data member.
+5.each optional data members will have a function inside builder class that will simply makes this."data member" = true and return this.
+6. so in simple terms, the function for optional paremeter will return the reference of the object with which this functiona is called.
+7. as eper yopur convenience, you can add whatever combination of optional data member in your object and finally call build function.
+8. build is the function inide builder class, which will be used to create aobject of orignal class and pass the object of builder class
+9.in the conctructor.
+
+
+
+
+
