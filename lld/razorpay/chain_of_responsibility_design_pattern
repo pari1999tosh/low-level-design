@@ -1,1 +1,137 @@
+whenever there is request that can be fullfilled by a particular handler out of some set of handler, but we don't know the handler in advance.
+we form a chain of these handler where every object will have reference to next object.so the request will either be fullfilled or passed on
+to next object in chain.
+
+
+2.suppose we have to build a logger logic to log messages ad different levels like info, debug, error, warning
+
+normally we would do it like below:
+public class Logger {
+    public static final int INFO = 1;
+    public static final int DEBUG = 2;
+    public static final int ERROR = 3;
+
+    public void log(int level, String message) {
+        if (level == INFO) {
+            System.out.println("INFO: " + message);
+        } else if (level == DEBUG) {
+            System.out.println("DEBUG: " + message);
+        } else if (level == ERROR) {
+            System.out.println("ERROR: " + message);
+        }
+    }
+}
+
+problems:
+1. if/else logic is not code scalable because it doesn't flow open/closed principle.if a new logging level comes, you will
+  have to modify the class.
+2.here, what and how is mixed up and tightly coupled, if there is some error in object creation of this class. your whole logging system
+  will go down.
+3.suppose instead of simply doing System.out.println("DEBUG: " + message), you have implemented some other logic also.suppose you have a 
+  requirement of triggering an alarm for a particular type of message and that logic is inside these if/else.
+   in future if you need to modify particular logging level, you will have to test this whole class again. so there is no
+    segregation of individual logging level.
+
+
+
+
+
+public interface Logger {
+    void setNext(Logger nextLogger);
+    void log(int level, String message);
+}
+
+public class LogLevel {
+    public static final int INFO = 1;
+    public static final int DEBUG = 2;
+    public static final int ERROR = 3;
+}
+
+concrete classes of above logger:
+class InfoLogger implements Logger {
+    private Logger nextLogger;
+
+    @Override
+    public void setNext(Logger nextLogger) {
+        this.nextLogger = nextLogger;
+    }
+
+    @Override
+    public void log(int level, String message) {
+        if (level == LogLevel.INFO) {
+            System.out.println("INFO: " + message);
+        } else if (nextLogger != null) {
+            nextLogger.log(level, message);
+        }
+    }
+}
+
+class DebugLogger implements Logger {
+    private Logger nextLogger;
+
+    @Override
+    public void setNext(Logger nextLogger) {
+        this.nextLogger = nextLogger;
+    }
+
+    @Override
+    public void log(int level, String message) {
+        if (level == LogLevel.DEBUG) {
+            System.out.println("DEBUG: " + message);
+        } else if (nextLogger != null) {
+            nextLogger.log(level, message);
+        }
+    }
+}
+
+class ErrorLogger implements Logger {
+    private Logger nextLogger;
+
+    @Override
+    public void setNext(Logger nextLogger) {
+        this.nextLogger = nextLogger;
+    }
+
+    @Override
+    public void log(int level, String message) {
+        if (level == LogLevel.ERROR) {
+            System.out.println("ERROR: " + message);
+        } else if (nextLogger != null) {
+            nextLogger.log(level, message);
+        }
+    }
+}
+
+
+
+public class LoggerChain {
+    public static Logger getChainOfLoggers() {
+        Logger errorLogger = new ErrorLogger();
+        Logger debugLogger = new DebugLogger();
+        Logger infoLogger = new InfoLogger();
+
+        errorLogger.setNext(debugLogger);
+        debugLogger.setNext(infoLogger);
+
+        return errorLogger;
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        Logger loggerChain = LoggerChain.getChainOfLoggers();
+
+        loggerChain.log(LogLevel.INFO, "This is an information.");
+        loggerChain.log(LogLevel.DEBUG, "This is a debug level message.");
+        loggerChain.log(LogLevel.ERROR, "This is an error message.");
+    }
+}
+
+
+
+
+
+ratne ka tareeka:
+no need to mug up, it's straight forward so understand.
+
 
