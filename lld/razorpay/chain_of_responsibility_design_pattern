@@ -13,10 +13,14 @@ public class Logger {
 
     public void log(int level, String message) {
         if (level == INFO) {
+            
             System.out.println("INFO: " + message);
         } else if (level == DEBUG) {
+            alarm("debug")
+            
             System.out.println("DEBUG: " + message);
         } else if (level == ERROR) {
+            cloudwatch("error")
             System.out.println("ERROR: " + message);
         }
     }
