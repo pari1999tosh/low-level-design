@@ -1,0 +1,166 @@
+1.whenever the requirement is to capture the history of various tasks/commands , we need to decouple the sender and reciever logic.
+2.this decoupling happens via segregating the reciever logic into execute,undo,redo functions.
+3.this way, client is only exposed to sender logic,reciever logic like undo,maintaining history etc is encapsulated in different
+  classes and not exposed to client.
+
+4.suppose we have to design a task scheduler in which tasks like sending email, generating report, backing up database can be scheduled.
+  system should support undo functioanlity at any moment
+5. without command pattern , our logic would look something like:
+
+   class TaskScheduler {
+
+      void runTask(String taskType) {
+          if (taskType.equals("email")) {
+              EmailService emailService = new EmailService();
+              emailService.sendEmail("user@example.com", "Welcome");
+          } else if (taskType.equals("report")) {
+              ReportService reportService = new ReportService();
+              reportService.generateReport("Monthly");
+          } else if (taskType.equals("backup")) {
+              BackupService backupService = new BackupService();
+              backupService.backupDatabase();
+          }
+          // and so on...
+      }
+  }
+
+6. we have various concrete classes for each task and each clas will have send function that can have the sending logic.
+7. looking at this code, you can easily say that here we are creating different objects based on some if/else condition.
+8. this if/else condition has various problems associated with it:
+   - code is tightly coupled, doesn't follow open/close principle.
+   - if the code inside any if or else created a problem leading to hurdles in creating object of task scheduler, whole system will go down
+     and other if/else which are supposed to perform as usual will also not work.
+   - testing will become difficult as whole class needs to be tested even if only one if/else logic changes.
+   - being non modular and tightly coupled, code scalability reduced.
+
+9. now you can observer that in abstract factory pattern , same problems used to come where we were creating different objects under
+   if/else conditions and we solved that using factories for these classes,but remember here these classes are not relatable
+   in out abstract factory example , both classes were relatable.
+   - we have shreyanshFactory and gauravFactory, both of them were having createLLD() and createHLD() function.
+   -here, classes are unrelatable, even if we make these classes relatable somehow.using abstract factory we will only solve object creation
+    problem. 
+   - but how would u handle undo,history functionality? also , using abstract factory , you will still have sender and reciver logic combined.
+   - so whenever the requirement is to decouple sender/reciever logic and maintain undo,history functionality where the system accepts
+     well defined tasks, we use command design pattern.
+   - this question is a mixture of abstract factory, adapter and command pattern , but command pattern is most suitable here because
+     the primary focus is to deocuple sender/reciever logic and maintain undo,execute functioanlity.
+   - you can see, here not only we are creating various objects based on if/else conditon, but we are handling behaviour also inside
+     the if/else logic (backupService.backupDatabase();,reportService.generateReport("Monthly");,emailService.sendEmail("user@example.com", "Welcome"); )
+     and in such use cases, if a legacy class comes, we will create adapter design pattern here to adapt legacy class because you will
+     see in command design pattern, all these task classes are concrete classes of an interface that has undo() and execute() fucntions,
+     so if a legacy class comes which has undoTask, executeTaks instead of undo,exeucte function or if the areguement list is different,
+     we can easily create a adapter for it.
+
+
+  10.now let's see how command pattern will solve this problem:
+     // 1. Command Interface
+public interface TaskCommand {
+    void execute();
+    void undo(); // Optional for supporting undo
+}
+
+// 2. Receiver Services
+class EmailService {
+    public void sendEmail(String recipient, String body) {
+        System.out.println("Sending email to " + recipient + ": " + body);
+    }
+
+    public void cancelEmail(String recipient) {
+        System.out.println("Cancelling email to " + recipient);
+    }
+}
+
+class ReportService {
+    public void generateReport(String type) {
+        System.out.println("Generating " + type + " report");
+    }
+
+    public void deleteReport(String type) {
+        System.out.println("Deleting " + type + " report");
+    }
+}
+
+// 3. Concrete Commands
+class EmailTask implements TaskCommand {
+    private EmailService service;
+    private String recipient;
+    private String body;
+
+    public EmailTask(EmailService service, String recipient, String body) {
+        this.service = service;
+        this.recipient = recipient;
+        this.body = body;
+    }
+                
+    public void execute() {
+        service.sendEmail(recipient, body);
+    }
+               
+    public void undo() {
+        service.cancelEmail(recipient);
+    }
+}
+
+class ReportTask implements TaskCommand {
+    private ReportService service;
+    private String reportType;
+
+    public ReportTask(ReportService service, String reportType) {
+        this.service = service;
+        this.reportType = reportType;
+    }
+
+    public void execute() {
+        service.generateReport(reportType);
+    }
+
+    public void undo() {
+        service.deleteReport(reportType);
+    }
+}
+
+// 4. Invoker (Task Scheduler)
+class TaskScheduler {
+    private Queue<TaskCommand> taskQueue = new LinkedList<>();
+    private Stack<TaskCommand> history = new Stack<>();
+
+    public void addTask(TaskCommand command) {
+        taskQueue.offer(command);
+    }
+
+    public void runTasks() {
+        while (!taskQueue.isEmpty()) {
+            TaskCommand command = taskQueue.poll();
+            command.execute();
+            history.push(command); // Store for undo
+        }
+    }
+
+    public void undoLast() {
+        if (!history.isEmpty()) {
+            TaskCommand last = history.pop();
+            last.undo();
+        }
+    }
+}
+
+// 5. Client
+public class Main {
+    public static void main(String[] args) {
+        EmailService emailService = new EmailService();
+        ReportService reportService = new ReportService();
+      
+        TaskCommand emailTask = new EmailTask(emailService, "user@example.com", "Welcome!");
+        TaskCommand reportTask = new ReportTask(reportService, "Monthly");
+         
+      
+        TaskScheduler scheduler = new TaskScheduler();
+        scheduler.addTask(emailTask);
+        scheduler.addTask(reportTask);
+
+        scheduler.runTasks();
+
+        // Suppose we want to undo the last task
+        scheduler.undoLast();
+    }
+}
