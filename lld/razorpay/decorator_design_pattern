@@ -4,8 +4,6 @@
 3. main focus is on below functionality: 
    - notification can be send via
      - email
-     - slack
-     - sms
      - email + slack
      - email + sms
      - sms + slack
@@ -43,6 +41,8 @@ public interface Notifier {
 }
 
 public class EmailNotifier implements Notifier {
+    
+    @override
     public void send(String message) {
         storeEmailInS3("message")//this function is an example of email sending logic, 
         System.out.println("Sending Email: " + message);
@@ -56,6 +56,7 @@ public class SMSNotifier implements Notifier {
         this.notifier = notifier;
     }
 
+    @override
     public void send(String message) {
         notifier.send(message); // delegate to inner
         storeSMSInDynamo("message")//this function is part of sms sending logic
@@ -70,17 +71,22 @@ public class SlackNotifier implements Notifier {
         this.notifier = notifier;
     }
 
+    @override
     public void send(String message) {
         notifier.send(message);
         triggerAWSAlarm("Amazon on call alarm")
         System.out.println("Sending Slack: " + message);
+
     }
 }
 
 public class Main {
     public static void main(String[] args) {
         Notifier n = new SlackNotifier(new SMSNotifier(new EmailNotifier()));
+        Notifier n2 = new SlackNotifier(new EmailNotifier());
+                  Pizza p =   new pannerorchicken(new Toppings((new PizzaBase())));
         n.send("Server down!");
+        n2.send("server up")
     }
 }
 
