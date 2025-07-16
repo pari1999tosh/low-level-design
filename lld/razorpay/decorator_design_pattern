@@ -1,0 +1,119 @@
+1.this pattern looks similar to bridge pattern and builder pattern, so please watch bridge and builder  video on my playlist  before this.
+  
+2. let's take the same example of sending notifications via email,slack,sms.
+3. main focus is on below functionality: 
+   - notification can be send via
+     - email
+     - slack
+     - sms
+     - email + slack
+     - email + sms
+     - sms + slack
+     - sms + email + slack
+
+ 4.you can see combinatorial explosion of classes here.
+ 5. bridge design pattern also can solve combinatorial explosion just like decorator pattern, but the purpose is completely different:
+ 6. bridge design pattern seperates "what" and "how" of system, it actually abstracts the "how" logic and then there will be multiple
+    combinatiors between "how" and "what", actually No_of("how") X No_of("what") combinations.
+ 7.here , we can combine the behaviour of different objects in any combinations witout changing the logic.
+
+ normally, you would design a class which will have function like this:
+ class NotifierManager {
+    void send(String message, boolean email, boolean sms, boolean slack) {
+        if (email) sendEmail(message);
+        if (sms) sendSMS(message);
+        if (slack) sendSlack(message);
+    }
+}
+
+problems:
+    Violates Open/Closed Principle
+    You must modify the class every time a new channel is added.
+    
+    Exponential combinations
+    You might be forced to create classes like EmailSmsNotifier, EmailSlackNotifier, etc.
+    
+    Tight Coupling
+    The logic of combining behaviors is hardcoded.
+
+   
+   
+public interface Notifier {
+    void send(String message);
+}
+
+public class EmailNotifier implements Notifier {
+    public void send(String message) {
+        storeEmailInS3("message")//this function is an example of email sending logic, 
+        System.out.println("Sending Email: " + message);
+    }
+}
+
+public class SMSNotifier implements Notifier {
+    private final Notifier notifier;
+
+    public SMSNotifier(Notifier notifier) {
+        this.notifier = notifier;
+    }
+
+    public void send(String message) {
+        notifier.send(message); // delegate to inner
+        storeSMSInDynamo("message")//this function is part of sms sending logic
+        System.out.println("Sending SMS: " + message);
+    }
+}
+
+public class SlackNotifier implements Notifier {
+    private final Notifier notifier;
+
+    public SlackNotifier(Notifier notifier) {
+        this.notifier = notifier;
+    }
+
+    public void send(String message) {
+        notifier.send(message);
+        triggerAWSAlarm("Amazon on call alarm")
+        System.out.println("Sending Slack: " + message);
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        Notifier n = new SlackNotifier(new SMSNotifier(new EmailNotifier()));
+        n.send("Server down!");
+    }
+}
+
+
+benefits:
+  Advantage	Explanation
+    - Composable behavior	You can dynamically choose which channels to use — no hardcoding logic or combinations.
+    - Open for extension	Add new channels like PushNotifier or WhatsAppNotifier without modifying any existing code.
+    - Separation of concerns	Each class does one job — email sending, SMS sending, etc.
+    - Decoupling	The main logic doesn’t know how each channel sends the message — it only delegates.
+
+
+but here, email class doesn't have notifier object, that's why email class can be used standalone.
+but sms and slack class if created, needs notifer object. that means slack and sms notification can't 
+be send alone.also, we can't so new EmailNotifer(new smsNotifier()), why?
+
+see, whenever the use case is, you have a base class which has to be there and along with it you want 
+combinations of extra class(decorator classes), then you can use this pattern.
+normally in corporate, offical communications happens via email, on top of it they might send slack or sms.
+to be more intuitive, pizza base is base concrete class, toppings,spice,chicken or panner etc are optional decorator class.
+this sounds more like builder design pattern where we were having lot of optional paremeters and we defined a function to add these
+optional paremeters ,each of these function was returing "this", which is basically the reference of the object with which the function
+was called, we could have use that here as below:
+Pizza pizza = new PizzaBuilder()
+                  .addCheese()
+                  .addPaneer()
+                  .addChicken()
+                  .build();
+
+
+then what's the difference?
+I will create a seperate video on what's the difference, for now this is the homework for you. please comment if you find the 
+answer.
+  
+
+
