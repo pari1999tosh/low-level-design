@@ -1,0 +1,136 @@
+1.this design pattern is simply encapsulation at bigger level.
+2.our goal is to expose as less complexity to client as possible so that client doesn't need to take care of anything.
+3.private hospital and govt hospital.
+4.govt hospital, you will have to do everything, get medicines. search for ward/bed. get the reports from nearby shop.
+5.private hospital , you as a client just have to interact with reception and they will send their staff for everthing.
+6.they have encapsulated the complexities of system from client.
+7.at code level, there are two types of classes. one is entity class, other is service class that operates on entity classes.
+8. when the system involves multiple service classes interacting with each other and operating on various entity class, the system
+   becomes too overwhelming for client to handle, hence we create a facade class, just like private hospital staff that does 
+   everything on user behalf.
+9.let's take an example:
+  A client (like OrderController) wants to place an order, which involves:
+    - Validating the customer
+    - Checking product stock
+    - Calculating discounts
+    - Charging the payment
+    - Saving the order
+
+10. entity classes:
+    class DiscountService {
+        public double applyDiscount(Product product, Customer customer) {
+            return 10.0; // flat 10 off for demo
+        }
+    }
+    
+    class PaymentService {
+        public void charge(Customer customer, double amount) {
+            System.out.println("Charging ₹" + amount + " to " + customer.name);
+        }
+    }
+    
+    class OrderRepository {
+        public void save(Order order) {
+            System.out.println("Order saved for " + order.customer.name);
+        }
+    }
+
+11. service classes:
+    class DiscountService {
+        public double applyDiscount(Product product, Customer customer) {
+            return 10.0; // flat 10 off for demo
+        }
+    }
+    
+    class PaymentService {
+        public void charge(Customer customer, double amount) {
+            System.out.println("Charging ₹" + amount + " to " + customer.name);
+        }
+    }
+    
+    class OrderRepository {
+        public void save(Order order) {
+            System.out.println("Order saved for " + order.customer.name);
+        }
+    }
+
+12. controller class without facade: 
+    public class OrderController {
+        public void placeOrder(Customer customer, Product product) {
+            if (!customer.validate()) {
+                System.out.println("Invalid customer");
+                return;
+            }
+    
+            if (!product.isInStock()) {
+                System.out.println("Product out of stock");
+                return;
+            }
+    
+            DiscountService discountService = new DiscountService();
+            double discount = discountService.applyDiscount(product, customer);
+            double finalPrice = 100.0 - discount;
+    
+            PaymentService paymentService = new PaymentService();
+            paymentService.charge(customer, finalPrice);
+    
+            product.reduceStock();
+    
+            Order order = new Order(customer, product, finalPrice);
+            OrderRepository repo = new OrderRepository();
+            repo.save(order);
+    
+            System.out.println("Order placed!");
+        }
+    }
+
+13. now, here we will create a facade :
+    class OrderFacade {
+        private DiscountService discountService = new DiscountService();
+        private PaymentService paymentService = new PaymentService();
+        private OrderRepository orderRepository = new OrderRepository();
+    
+        public void placeOrder(Customer customer, Product product) {
+            if (!customer.validate()) {
+                System.out.println("Invalid customer");
+                return;
+            }
+    
+            if (!product.isInStock()) {
+                System.out.println("Product out of stock");
+                return;
+            }
+    
+            double discount = discountService.applyDiscount(product, customer);
+            double finalPrice = 100.0 - discount;
+    
+            paymentService.charge(customer, finalPrice);
+            product.reduceStock();
+    
+            Order order = new Order(customer, product, finalPrice);
+            orderRepository.save(order);
+    
+            System.out.println("Order placed successfully!");
+        }
+    }
+
+14. public class OrderController {
+        public void handlePlaceOrder(Customer customer, Product product) {
+            OrderFacade facade = new OrderFacade();
+            facade.placeOrder(customer, product);
+        }
+    }
+
+ratne ka tarika:
+ - simply ignore this pattern and keep designing the system, at the end whenever you see too much complex logic in client code , create 
+   a new facade class and put this logic there.
+ - use this facade class inside controller.
+
+ benefits:
+  - code reusablility, facade class is already tested and no need to test again when used in other controller.
+  - if the interaction logic changes, change only facade class and it will be reflected everywhere.
+  - clear segregation between client side errors and backend errors 
+
+
+
+
