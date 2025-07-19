@@ -17,23 +17,42 @@
     - Saving the order
 
 10. entity classes:
-    class DiscountService {
-        public double applyDiscount(Product product, Customer customer) {
-            return 10.0; // flat 10 off for demo
-        }
-    }
-    
-    class PaymentService {
-        public void charge(Customer customer, double amount) {
-            System.out.println("Charging ₹" + amount + " to " + customer.name);
-        }
-    }
-    
-    class OrderRepository {
-        public void save(Order order) {
-            System.out.println("Order saved for " + order.customer.name);
-        }
-    }
+    class Customer {
+          int id;
+          String name;
+          boolean isActive;
+      
+          public boolean validate() {
+              return isActive;
+          }
+      }
+      
+      class Product {
+          int id;
+          String name;
+          int stock;
+      
+          public boolean isInStock() {
+              return stock > 0;
+          }
+      
+          public void reduceStock() {
+              stock--;
+          }
+      }
+      
+      class Order {
+          Customer customer;
+          Product product;
+          double finalPrice;
+      
+          public Order(Customer customer, Product product, double price) {
+              this.customer = customer;
+              this.product = product;
+              this.finalPrice = price;
+          }
+      }
+
 
 11. service classes:
     class DiscountService {
