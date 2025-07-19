@@ -1,0 +1,106 @@
+without flyweight: x*9:
+class CellWithoutFlyweight {
+    private final String value;
+
+    public CellWithoutFlyweight(String value) {
+        this.value = value;
+        System.out.println("Created new CellWithoutFlyweight with value: " + value);
+    }
+
+    public void display(int row, int col) {
+        System.out.println("[" + row + "," + col + "] = " + value);
+    }
+}
+
+public class TicTacToeBoardWithoutFlyweight {
+    private CellWithoutFlyweight[][] board = new CellWithoutFlyweight[3][3];
+
+    public void place(int row, int col, String value) {
+        board[row][col] = new CellWithoutFlyweight(value); // ❌ New object each time
+    }
+
+    public void displayBoard() {
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                if (board[i][j] != null)
+                    board[i][j].display(i, j);
+                else
+                    System.out.println("[" + i + "," + j + "] = empty");
+            }
+        }
+    }
+}
+
+
+
+2. flyweight with final: x*2:
+class MarkerWithFinal {
+    private final String value;
+
+    public MarkerWithFinal(String value) {
+        this.value = value;
+        System.out.println("Created MarkerWithFinal with value: " + value);
+    }
+
+    public void display(int row, int col) {
+        System.out.println("[" + row + "," + col + "] = " + value);
+    }
+}
+
+public class TicTacToeBoardWithFlyweightFinal {
+    private final MarkerWithFinal xMarker = new MarkerWithFinal("X"); // ✅ per board
+    private final MarkerWithFinal oMarker = new MarkerWithFinal("O");
+    private MarkerWithFinal[][] board = new MarkerWithFinal[3][3];
+
+    public void place(int row, int col, String value) {
+        if ("X".equals(value)) board[row][col] = xMarker;
+        else if ("O".equals(value)) board[row][col] = oMarker;
+    }
+
+    public void displayBoard() {
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                MarkerWithFinal marker = board[i][j];
+                if (marker != null) marker.display(i, j);
+                else System.out.println("[" + i + "," + j + "] = empty");
+            }
+        }
+    }
+}
+
+
+
+3. flyweight with static final:
+class MarkerStaticFinal {
+    private final String value;
+
+    public MarkerStaticFinal(String value) {
+        this.value = value;
+        System.out.println("Created MarkerStaticFinal with value: " + value);
+    }
+
+    public void display(int row, int col) {
+        System.out.println("[" + row + "," + col + "] = " + value);
+    }
+}
+
+public class TicTacToeBoardWithFlyweightStaticFinal {
+    private static final MarkerStaticFinal xMarker = new MarkerStaticFinal("X"); // ✅ global shared
+    private static final MarkerStaticFinal oMarker = new MarkerStaticFinal("O");
+    private MarkerStaticFinal[][] board = new MarkerStaticFinal[3][3];
+
+    public void place(int row, int col, String value) {
+        if ("X".equals(value)) board[row][col] = xMarker;
+        else if ("O".equals(value)) board[row][col] = oMarker;
+    }
+
+    public void displayBoard() {
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                MarkerStaticFinal marker = board[i][j];
+                if (marker != null) marker.display(i, j);
+                else System.out.println("[" + i + "," + j + "] = empty");
+            }
+        }
+    }
+}
