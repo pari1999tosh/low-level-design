@@ -69,6 +69,9 @@ public class TicTacToeBoardWithFlyweightFinal {
 }
 
 
+a.xMarker
+
+
 
 3. flyweight with static final:
 class MarkerStaticFinal {
@@ -85,8 +88,8 @@ class MarkerStaticFinal {
 }
 
 public class TicTacToeBoardWithFlyweightStaticFinal {
-    private static final MarkerStaticFinal xMarker = new MarkerStaticFinal("X"); // ✅ global shared
-    private static final MarkerStaticFinal oMarker = new MarkerStaticFinal("O");
+    private static  MarkerStaticFinal xMarker = new MarkerStaticFinal("X"); // ✅ global shared
+    private static MarkerStaticFinal oMarker = new MarkerStaticFinal("O");
     private MarkerStaticFinal[][] board = new MarkerStaticFinal[3][3];
 
     public void place(int row, int col, String value) {
@@ -104,3 +107,10 @@ public class TicTacToeBoardWithFlyweightStaticFinal {
         }
     }
 }
+ 
+
+
+conclusion:
+1.without flyweight: total objects = no_of_concurrent_user*9
+2.with flyweight pattern and final = no_of_concurrent_user*2
+3.
