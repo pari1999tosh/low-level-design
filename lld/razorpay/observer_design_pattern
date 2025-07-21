@@ -1,1 +1,87 @@
+1.whenever there is a situation where you have a class which will emit a event that has bee subscribed by other classes,
+we can use this pattern to keep our code in compliance with solid principles.
+
+public class OrderService {
+    private EmailService emailService = new EmailService();
+    private InventoryService inventoryService = new InventoryService();
+    private AnalyticsService analyticsService = new AnalyticsService();
+
+    public void placeOrder(String item) {
+        System.out.println("Order placed for: " + item);
+        emailService.sendEmail(item);
+        inventoryService.updateStock(item);
+        analyticsService.recordOrder(item);
+    }
+}
+
+
+import java.util.*;
+
+// Observer Interface
+interface OrderPlacedObserver {
+    void onOrderPlaced(String item);
+}
+
+// Concrete Observer: Email Service
+class EmailService implements OrderPlacedObserver {
+    @Override
+    public void onOrderPlaced(String item) {
+        System.out.println("[EmailService] Email sent for item: " + item);
+    }
+}
+
+// Concrete Observer: Inventory Service
+class InventoryService implements OrderPlacedObserver {
+    @Override
+    public void onOrderPlaced(String item) {
+        System.out.println("[InventoryService] Inventory updated for item: " + item);
+    }
+}
+
+// Concrete Observer: Analytics Service
+class AnalyticsService implements OrderPlacedObserver {
+    @Override
+    public void onOrderPlaced(String item) {
+        System.out.println("[AnalyticsService] Analytics recorded for item: " + item);
+    }
+}
+
+// Subject Class
+class OrderService {
+    private List<OrderPlacedObserver> observers = new ArrayList<>();
+
+    public void addObserver(OrderPlacedObserver observer) {
+        observers.add(observer);
+    }
+
+    public void removeObserver(OrderPlacedObserver observer) {
+        observers.remove(observer);
+    }
+
+    public void placeOrder(String item) {
+        System.out.println("[OrderService] Order placed for item: " + item);
+        notifyAllObservers(item);
+    }
+
+    private void notifyAllObservers(String item) {
+        for (OrderPlacedObserver observer : observers) {
+            observer.onOrderPlaced(item);
+        }
+    }
+}
+
+// Main class for testing
+public class ObserverPatternDemo {
+    public static void main(String[] args) {
+        OrderService orderService = new OrderService();
+
+        orderService.addObserver(new EmailService());
+        orderService.addObserver(new InventoryService());
+        orderService.addObserver(new AnalyticsService());
+
+        orderService.placeOrder("MacBook Pro");
+        orderService.placeOrder("iPhone 15");
+    }
+}
+
 
