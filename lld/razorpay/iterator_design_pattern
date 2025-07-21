@@ -1,1 +1,106 @@
+1.just like in facade pattern,where we take away all responsibilities from client and put that into facade class.
+2.here in iterator pattern, we take away iteration responsibilities and put it into iterator class.
+3.scenario:
+  suppose you are storing a list of integer in a binary search tree. 
+  user should be able to get sorted list stored in BST.
+  if the resposibility of iteration is given to client, following problems would come:
+  Problems:
+   1.client will be exposed to internal implementation of data storage and data structures.
+   - one would write the logic of inorder traversal to get it.
+   - the moment you will expose the inorder traversal logic to client, it will know that you are storing data in the form of tree.
+   - think it like this, suppose in a web app, you are storing some data in database in the form of tree and from react front end,
+     you hit an API to get sorted list, in this case your API will get the tree structure from database and parse it into single sorted
+     list and then return it as a response, you could have passed entire tree structure in response and react front end might be 
+     writing logic to parse the tree and get single list, but we didn't do that because react/client is not required to know the internal
+     implementation of how the data is stored in what data strcuture/format.
+
+   2.there is possibility of non-uniform retrival of data by different sets of clients.
+   - to get a sorted list from BST, client would write inorder traversal.client can also write reverse inorder traversal and then reverse
+     the whole list.
+   - so in future if a bug comes , and you knew that the retrival logic is uniform, you would not be looking into various client code,
+   - what if client code/front end is developed by some other team?
+   - you would be telling each time about how our data is stored.remember , data privacy is equally important as data security.
+
+
+in below example, you will understand how we will write code for it:
+// NotificationIteratorDemo.java
+
+class Notification {
+    private String message;
+
+    public Notification(String message) {
+        this.message = message;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+}
+
+// Custom iterator interface
+interface NotificationIterator {
+    boolean hasNext();
+    Notification next();
+}
+
+// Iterator implementation for array
+class NotificationListIterator implements NotificationIterator {
+    private Notification[] notifications;
+    private int position = 0;
+    private int size;
+
+    public NotificationListIterator(Notification[] notifications, int size) {
+        this.notifications = notifications;
+        this.size = size;
+    }
+
+    @Override
+    public boolean hasNext() {
+        return position < size && notifications[position] != null;
+    }
+
+    @Override
+    public Notification next() {
+        return notifications[position++];
+    }
+}
+
+// Collection that stores notifications and creates iterator
+class NotificationCollection {
+    private Notification[] notifications;
+    private int size = 0;
+
+    public NotificationCollection(int capacity) {
+        this.notifications = new Notification[capacity];
+    }
+
+    public void addNotification(String message) {
+        if (size < notifications.length) {
+            notifications[size++] = new Notification(message);
+        }
+    }
+
+    public NotificationIterator createIterator() {
+        return new NotificationListIterator(notifications, size);
+    }
+}
+
+// Client code
+public class NotificationIteratorDemo {
+    public static void main(String[] args) {
+        NotificationCollection collection = new NotificationCollection(10);
+
+        collection.addNotification("New comment on your post");
+        collection.addNotification("Friend request received");
+        collection.addNotification("System update available");
+
+        NotificationIterator iterator = collection.createIterator();
+
+        System.out.println(" Your Notifications:");
+        while (iterator.hasNext()) {
+            Notification notification = iterator.next();
+            System.out.println(notification.getMessage());
+        }
+    }
+}
 
