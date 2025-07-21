@@ -5,7 +5,7 @@ public class OrderService {
     private EmailService emailService = new EmailService();
     private InventoryService inventoryService = new InventoryService();
     private AnalyticsService analyticsService = new AnalyticsService();
-
+    private 
     public void placeOrder(String item) {
         System.out.println("Order placed for: " + item);
         emailService.sendEmail(item);
@@ -26,8 +26,11 @@ interface OrderPlacedObserver {
 class EmailService implements OrderPlacedObserver {
     @Override
     public void onOrderPlaced(String item) {
+        //put all processing of sendEmaul here
         System.out.println("[EmailService] Email sent for item: " + item);
     }
+
+    
 }
 
 // Concrete Observer: Inventory Service
@@ -42,6 +45,7 @@ class InventoryService implements OrderPlacedObserver {
 class AnalyticsService implements OrderPlacedObserver {
     @Override
     public void onOrderPlaced(String item) {
+        
         System.out.println("[AnalyticsService] Analytics recorded for item: " + item);
     }
 }
@@ -83,5 +87,16 @@ public class ObserverPatternDemo {
         orderService.placeOrder("iPhone 15");
     }
 }
+
+
+ratne ka tarika:
+1.you must be having an observable class which will have a function that will emit event, suppose the function name is orderPlaced.
+2.now you will be having multiple classes that are doing somthing whenever they recieve an event, suppose you have 3 classes which 
+  will do sendEmail(), sendSMS(), updateStock() when ther recieve a event.
+3.to implement observer design pattern here, simple create an interface and give a function onOrderPlaced .now all 3 observer class
+   will implement this interface and overrusde onOrderPlace function. each of these class will have their respective functionality
+   i:e sendEmail, sendSms, updatedStock embedded inside this overriden version of onOrderPlace function.
+4.now, simply store the objects of these observer classes as a list inside observable classes.
+5.create a function notifyAll(), which will simply do a for loop over the list and call the onOrderPlace function of these objects.
 
 
