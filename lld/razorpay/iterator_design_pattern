@@ -95,7 +95,7 @@ public class NotificationIteratorDemo {
         collection.addNotification("System update available");
 
         NotificationIterator iterator = collection.createIterator();
-
+        
         System.out.println(" Your Notifications:");
         while (iterator.hasNext()) {
             Notification notification = iterator.next();
