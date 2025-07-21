@@ -144,6 +144,10 @@ class NotificationDispatcher {
         channelMap.put(channel.getChannelName(), channel);
     }
 
+    public void unRegisterChannel(string channelName) {
+        //remove channel from dispatcher
+    }
+
     public void dispatch(Notification notification) {
         for (String ch : notification.channels) {
             NotificationChannel channel = channelMap.get(ch);
