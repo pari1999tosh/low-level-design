@@ -1,1 +1,221 @@
+1.this code supports single reponsibility and open closed principle because whenever a common logic which is supposed to be used
+  by various service classes, we seperate that logic into a mediator classes.
+2.let's take notification example, suppose there are multiple ways to send notification like sms,email,slack etc.
+3.suppose there are multiple services class in a system like order service.
+
+
+below is the code without mediator pattern:
+ // --- Notification and Channel Classes ---
+
+    class Notification {
+        String message;
+        String userId;
+    
+        Notification(String message, String userId) {
+            this.message = message;
+            this.userId = userId;
+        }
+    }
+    
+    class EmailChannel {
+        public void send(Notification n) {
+            System.out.println("EMAIL to " + n.userId + ": " + n.message);
+        }
+    }
+    
+    class SMSChannel {
+        public void send(Notification n) {
+            System.out.println("SMS to " + n.userId + ": " + n.message);
+        }
+    }
+    
+    // --- Services (Each Service has to manage all channels manually) ---
+    
+    class OrderService {
+        EmailChannel email = new EmailChannel();
+        SMSChannel sms = new SMSChannel();
+    
+        public void placeOrder(String userId) {
+            System.out.println("Order placed for user " + userId);
+            Notification n = new Notification("Your order has been placed.", userId);
+            email.send(n);
+            sms.send(n);
+        }
+    }
+    
+    class PaymentService {
+        EmailChannel email = new EmailChannel();
+        SMSChannel sms = new SMSChannel();
+    
+        public void processPayment(String userId) {
+            System.out.println("Payment processed for user " + userId);
+            Notification n = new Notification("Payment received successfully.", userId);
+            email.send(n);
+            sms.send(n);
+        }
+    }
+    
+    class SupportService {
+        EmailChannel email = new EmailChannel();
+        SMSChannel sms = new SMSChannel();
+    
+        public void raiseTicket(String userId) {
+            System.out.println("Support ticket raised for user " + userId);
+            Notification n = new Notification("Support ticket has been created.", userId);
+            email.send(n);
+            sms.send(n);
+        }
+    }
+    
+    // --- Main Program ---
+    
+    public class WithoutMediatorDemo {
+        public static void main(String[] args) {
+            OrderService orderService = new OrderService();
+            PaymentService paymentService = new PaymentService();
+            SupportService supportService = new SupportService();
+    
+            orderService.placeOrder("user123");
+            paymentService.processPayment("user123");
+            supportService.raiseTicket("user123");
+        }
+    }
+
+=================================================     problems                     ==============================================
+
+scenarios:
+  1. each channel will be exposed to each service class if we want our notifications to be capable of sending via any channel.
+  2. open/close principle not followed because to add/remove a channel, change will go everywhere.
+  3.service classes already have their single responsibilities, we will add another responsibility of sending notification to it.
+  4.testing is a nightmare, you can't test service classes without channel objects.
+  5.common functionalities like Retry policies, Logging, Queue-based async notification delivery will have to be duplicated for each service class
+
+================================================= with mediator pattern code below ==============================================
+
+2.below is the code using mediatory design pattern.
+
+import java.util.*;
+
+// --- Notification and Channel Interface ---
+
+class Notification {
+    String message;
+    String userId;
+    Set<String> channels;
+
+    Notification(String message, String userId, Set<String> channels) {
+        this.message = message;
+        this.userId = userId;
+        this.channels = channels;
+    }
+}
+
+interface NotificationChannel {
+    void send(Notification notification);
+    String getChannelName();
+}
+
+class EmailChannel implements NotificationChannel {
+    public void send(Notification n) {
+        System.out.println("EMAIL to " + n.userId + ": " + n.message);
+    }
+
+    public String getChannelName() {
+        return "EMAIL";
+    }
+}
+
+class SMSChannel implements NotificationChannel {
+    public void send(Notification n) {
+        System.out.println("SMS to " + n.userId + ": " + n.message);
+    }
+
+    public String getChannelName() {
+        return "SMS";
+    }
+}
+
+// --- Mediator ---
+
+class NotificationDispatcher {
+    private Map<String, NotificationChannel> channelMap = new HashMap<>();
+
+    public void registerChannel(NotificationChannel channel) {
+        channelMap.put(channel.getChannelName(), channel);
+    }
+
+    public void dispatch(Notification notification) {
+        for (String ch : notification.channels) {
+            NotificationChannel channel = channelMap.get(ch);
+            if (channel != null) {
+                channel.send(notification);
+            } else {
+                System.out.println("Channel not found: " + ch);
+            }
+        }
+    }
+}
+
+// --- Services using Mediator ---
+
+class OrderService {
+    private NotificationDispatcher dispatcher;
+    
+    public OrderService(NotificationDispatcher dispatcher) {
+        this.dispatcher = dispatcher;
+    }
+
+    public void placeOrder(String userId) {
+        System.out.println("Order placed for user " + userId);
+        Notification n = new Notification("Your order has been placed.", userId, Set.of("EMAIL", "SMS"));
+        dispatcher.dispatch(n);
+    }
+}
+
+class PaymentService {
+    private NotificationDispatcher dispatcher;
+
+    public PaymentService(NotificationDispatcher dispatcher) {
+        this.dispatcher = dispatcher;
+    }
+
+    public void processPayment(String userId) {
+        System.out.println("Payment processed for user " + userId);
+        Notification n = new Notification("Payment received successfully.", userId, Set.of("EMAIL", "SMS"));
+        dispatcher.dispatch(n);
+    }
+}
+
+class SupportService {
+    private NotificationDispatcher dispatcher;
+
+    public SupportService(NotificationDispatcher dispatcher) {
+        this.dispatcher = dispatcher;
+    }
+
+    public void raiseTicket(String userId) {
+        System.out.println("Support ticket raised for user " + userId);
+        Notification n = new Notification("Support ticket has been created.", userId, Set.of("EMAIL", "SMS"));
+        dispatcher.dispatch(n);
+    }
+}
+
+// --- Main Program ---
+
+public class WithMediatorDemo {
+    public static void main(String[] args) {
+        NotificationDispatcher dispatcher = new NotificationDispatcher();
+        dispatcher.registerChannel(new EmailChannel());
+        dispatcher.registerChannel(new SMSChannel());
+
+        OrderService orderService = new OrderService(dispatcher);
+        PaymentService paymentService = new PaymentService(dispatcher);
+        SupportService supportService = new SupportService(dispatcher);
+
+        orderService.placeOrder("user123");
+        paymentService.processPayment("user123");
+        supportService.raiseTicket("user123");
+    }
+}
+
 
