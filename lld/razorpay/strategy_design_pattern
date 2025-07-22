@@ -1,1 +1,82 @@
+1.whenever the system has service classes(classes which are not entity but have functions that can be used by other classes as a service).
+  and these classes can be grouped together because they follow similar behaviour, we can define stratefy interface for these classes.
+2. example: notification has lot of channels like email,sms,push,slack,watsapp.
+3.    map navigation system that has walking,cycling,car,train route building system
+
+
+what happens if you don't use strategy pattern:
+
+class NotificationService {
+    public void sendNotification(String type, String message) {
+        if (type.equals("EMAIL")) {
+            System.out.println("Sending EMAIL: " + message);
+            // Email logic
+        } else if (type.equals("SMS")) {
+            System.out.println("Sending SMS: " + message);
+            // SMS logic
+        } else if (type.equals("PUSH")) {
+            System.out.println("Sending PUSH Notification: " + message);
+            // Push logic
+        } else {
+            throw new IllegalArgumentException("Unsupported notification type");
+        }
+    }
+}
+
+
+code with design pattern:
+// NotificationStrategyDemo.java
+
+interface NotificationStrategy {
+    void send(String message);
+}
+
+// Concrete Strategies
+class EmailNotification implements NotificationStrategy {
+    @Override
+    public void send(String message) {
+        System.out.println("📧 Sending Email: " + message);
+    }
+}
+
+class SmsNotification implements NotificationStrategy {
+    @Override
+    public void send(String message) {
+        System.out.println("📱 Sending SMS: " + message);
+    }
+}
+
+class PushNotification implements NotificationStrategy {
+    @Override
+    public void send(String message) {
+        System.out.println("🔔 Sending Push Notification: " + message);
+    }
+}
+
+// Context Class
+class NotificationService {
+    private NotificationStrategy strategy;
+
+    public NotificationService(NotificationStrategy strategy) {
+        this.strategy = strategy;
+    }
+
+    public void send(String message) {
+        strategy.send(message);
+    }
+}
+
+// Main Class
+public class NotificationStrategyDemo {
+    public static void main(String[] args) {
+        NotificationService emailService = new NotificationService(new EmailNotification());
+        emailService.send("Welcome to our platform!");
+
+        NotificationService smsService = new NotificationService(new SmsNotification());
+        smsService.send("Your OTP is 123456");
+
+        NotificationService pushService = new NotificationService(new PushNotification());
+        pushService.send("You have a new friend request!");
+    }
+}
 
