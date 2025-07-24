@@ -1,0 +1,120 @@
+1.proxy design patterns is used to segregate the responsibilities like logging,access control, 
+  lazy initialization, caching etc from a class by creating a proxy class that has
+  object of real class and functions with segregated responsibilities.
+2. let's take an example of cloud storage system that has capacility to read file and we need to implement access control.
+
+without design pattern:
+
+class RealFile {
+    private String filename;
+
+    public RealFile(String filename) {
+        this.filename = filename;
+    }
+
+    public void read(User user) {
+        if (user.getRole().equals("admin") || user.getRole().equals("editor")) {
+            System.out.println(user.getName() + " is reading the file: " + filename);
+        } else {
+            System.out.println("Access denied to " + user.getName());
+        }
+    }
+}
+
+class User {
+    private String name;
+    private String role; // admin, editor, viewer
+
+    public User(String name, String role) {
+        this.name = name;
+        this.role = role;
+    }
+
+    public String getRole() { return role; }
+    public String getName() { return name; }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        User admin = new User("Alice", "admin");
+        User viewer = new User("Bob", "viewer");
+
+        RealFile file = new RealFile("secrets.txt");
+        file.read(admin);   // ✅ Allowed
+        file.read(viewer);  // ❌ Denied
+    }
+}
+
+
+with proxy design pattern:
+
+// Step 1: Interface
+interface File {
+    void read(User user);
+}
+
+// Step 2: Real implementation
+class RealFile implements File {
+    private String filename;
+
+    public RealFile(String filename) {
+        this.filename = filename;
+    }
+
+    @Override
+    public void read(User user) {
+        System.out.println(user.getName() + " is reading the file: " + filename);
+    }
+}
+
+// Step 3: Proxy that controls access
+class FileProxy implements File {
+    private RealFile realFile;
+    private String filename;
+
+    public FileProxy(String filename) {
+        this.filename = filename;
+    }
+
+    @Override
+    public void read(User user) {
+        if (user.getRole().equals("admin") || user.getRole().equals("editor")) {
+            if (realFile == null) {
+                realFile = new RealFile(filename); // Lazy initialization
+            }
+            System.out.println("Access granted to " + user.getName());
+            realFile.read(user);
+        } else {
+            System.out.println("Access denied to " + user.getName());
+        }
+    }
+}
+
+// Supporting class
+class User {
+    private String name;
+    private String role;
+
+    public User(String name, String role) {
+        this.name = name;
+        this.role = role;
+    }
+
+    public String getRole() { return role; }
+    public String getName() { return name; }
+}
+
+// Main client
+public class Main {
+    public static void main(String[] args) {
+        User admin = new User("Alice", "admin");
+        User editor = new User("Charlie", "editor");
+        User viewer = new User("Bob", "viewer");
+
+        File file = new FileProxy("design_doc.txt");
+
+        file.read(admin);   // ✅ Allowed
+        file.read(editor);  // ✅ Allowed
+        file.read(viewer);  // ❌ Denied
+    }
+}
