@@ -1,1 +1,58 @@
+1.whenever in a class , the process of creating an object is computation heavy, we use prototype design pattern using following steps:
+ - create an interface called prototype and define a function clone();
+ - make the class implement this interface.
+ - inside class, override the clone function with return type as Prototype.
+ - this function will simply create a new object using default constructor instead of parameterized constructor which is faster
+ - you can later copy the values of existing object inside it.
+
+interview tips: whenever interviewer focuses on low-latency as primary non-functional requirement, most probably you will be 
+                this pattern.
+
+
+class EmailNotification implements Notification {
+    private String recipient;
+    private String message;
+    private String subject;
+
+    // 🛠 Expensive constructor: simulates I/O, DB, or template loading
+    public EmailNotification(String subject, String message) {
+        simulateHeavyConstruction();  // Called only once
+        this.subject = subject;
+        this.message = message;
+    }
+
+    // ✅ Default constructor used during clone
+    public EmailNotification() {}
+
+    private void simulateHeavyConstruction() {
+        System.out.println("Loading template... (simulating heavy logic)");
+        try {
+            Thread.sleep(2000); // Expensive setup
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ✅ clone uses default constructor + manual copy
+    @Override
+    public EmailNotification clone() {
+        EmailNotification copy = new EmailNotification();  // No heavy logic
+        copy.subject = this.subject;
+        copy.message = this.message;
+        copy.recipient = this.recipient;
+        return copy;
+    }
+
+    public void setRecipient(String recipient) {
+        this.recipient = recipient;
+    }
+
+    @Override
+    public void send() {
+        System.out.println("To: " + recipient);
+        System.out.println("Subject: " + subject);
+        System.out.println("Message: " + message);
+        System.out.println("----------------------------");
+    }
+}
 
