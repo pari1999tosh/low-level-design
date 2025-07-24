@@ -9,6 +9,10 @@ interview tips: whenever interviewer focuses on low-latency as primary non-funct
                 this pattern.
 
 
+interface Prototype {
+  Prototype clone();
+}
+
 class EmailNotification implements Notification {
     private String recipient;
     private String message;
@@ -19,10 +23,13 @@ class EmailNotification implements Notification {
         simulateHeavyConstruction();  // Called only once
         this.subject = subject;
         this.message = message;
+        
     }
 
     // ✅ Default constructor used during clone
-    public EmailNotification() {}
+    public EmailNotification() {
+       //empty values
+    }
 
     private void simulateHeavyConstruction() {
         System.out.println("Loading template... (simulating heavy logic)");
