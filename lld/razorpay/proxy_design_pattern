@@ -3,6 +3,28 @@
   object of real class and functions with segregated responsibilities.
 2. let's take an example of cloud storage system that has capacility to read file and we need to implement access control.
 
+
+initial dev stage code:
+
+interface File {
+    void read();
+}
+
+// Real implementation (no access control yet)
+class RealFile implements File {
+    private String filename;
+
+    public RealFile(String filename) {
+        this.filename = filename;
+    }
+
+    @Override
+    public void read() {
+        //actual file leading logic function
+        readFileFromS3();
+    }
+}
+
 without design pattern:
 
 class RealFile {
@@ -14,8 +36,12 @@ class RealFile {
 
     public void read(User user) {
         if (user.getRole().equals("admin") || user.getRole().equals("editor")) {
+            //hypothetical function
+            fileReadingLogic();
             System.out.println(user.getName() + " is reading the file: " + filename);
         } else {
+            //hypothetical function
+            fileReadingLogic();
             System.out.println("Access denied to " + user.getName());
         }
     }
