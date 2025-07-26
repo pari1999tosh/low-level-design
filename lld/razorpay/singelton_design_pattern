@@ -1,3 +1,8 @@
+1.you will learn:
+1.what problems comes if we don't follow singelton pattern.
+2. how we implement singelton pattern using static functions.
+3.what are static functions.
+
 1.suppose we have a functionality that has been put as a member function inside a class and exposed as a service, which can be
   utilised by various objects of different classes, for ex: a placeOrder(User user, Item item) function which belongs to
   OrderService class, that can be used by 
