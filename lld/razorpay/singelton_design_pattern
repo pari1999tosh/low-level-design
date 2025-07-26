@@ -1,0 +1,84 @@
+1.suppose we have a functionality that has been put as a member function inside a class and exposed as a service, which can be
+  utilised by various objects of different classes, for ex: a placeOrder(User user, Item item) function which belongs to
+  OrderService class, that can be used by 
+  multiple user objects in combination with multiple Items objects. each time we want to place order, we will create an object of
+  OrderService class and then use this function like O.placeOrder.this leads to several problems -
+
+  1. unnecessary objects explosion leading to heap memory out of bounds.
+  2. inconsistent logs due to different instances.
+  3.impossible to implement transactions at code level
+
+  without singleton design pattern:
+
+  class DatabaseConnection {
+    private static int counter = 0;
+    private int id;
+    private String s3LogFile;
+
+    public DatabaseConnection() {
+        id = ++counter;
+        this.s3LogFile = "s3://logs/db-log-" + id + ".txt";
+        System.out.println("DB Connection #" + id + " created. Logging to: " + s3LogFile);
+    }
+
+    public void query(String sql) {
+        System.out.println("[" + s3LogFile + "] Executing: " + sql);
+    }
+}
+
+// Individual services spinning up their own DB connection
+
+class UserService {
+    public void fetchUserData() {
+        DatabaseConnection db = new DatabaseConnection();
+        db.query("SELECT * FROM users WHERE id = 123");
+    }
+}
+
+class CartService {
+    public void fetchCartItems() {
+        DatabaseConnection db = new DatabaseConnection();
+        db.query("SELECT * FROM cart WHERE user_id = 123");
+    }
+}
+
+class OrderService {
+    public void createOrder() {
+        DatabaseConnection db = new DatabaseConnection();
+        db.query("INSERT INTO orders (user_id, item_id, qty) VALUES (123, 456, 2)");
+    }
+}
+
+class CartCleanupService {
+    public void deleteCartItems() {
+        DatabaseConnection db = new DatabaseConnection();
+        db.query("DELETE FROM cart WHERE user_id = 123");
+    }
+}
+
+public class TransactionAPI {
+    public static void main(String[] args) {
+        System.out.println("---- Starting Transaction ----");
+
+        UserService userService = new UserService();
+        CartService cartService = new CartService();
+        OrderService orderService = new OrderService();
+        CartCleanupService cartCleanupService = new CartCleanupService();
+
+        userService.fetchUserData();
+        cartService.fetchCartItems();
+
+        try {
+            orderService.createOrder(); // Suppose this fails
+            cartCleanupService.deleteCartItems();
+        } catch (Exception e) {
+            System.out.println("❌ Order failed. Rolling back...");
+        }
+
+        System.out.println("---- Transaction Complete ----");
+    }
+}
+
+
+=====================================code with singleton design pattern starts below==========================
+
