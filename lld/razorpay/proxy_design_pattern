@@ -6,12 +6,10 @@
 
 initial dev stage code:
 
-interface File {
-    void read();
-}
 
-// Real implementation (no access control yet)
-class RealFile implements File {
+
+
+class RealFile  {
     private String filename;
 
     public RealFile(String filename) {
@@ -21,7 +19,7 @@ class RealFile implements File {
     @Override
     public void read() {
         //actual file leading logic function
-        readFileFromS3();
+        
     }
 }
 
@@ -35,13 +33,13 @@ class RealFile {
     }
 
     public void read(User user) {
-        if (user.getRole().equals("admin") || user.getRole().equals("editor")) {
+        if (user.getRole().equals("netaji") || user.getRole().equals("daroga")) {
             //hypothetical function
-            fileReadingLogic();
+            readFileFromS3();
             System.out.println(user.getName() + " is reading the file: " + filename);
-        } else {
+        } else  {
             //hypothetical function
-            fileReadingLogic();
+            
             System.out.println("Access denied to " + user.getName());
         }
     }
@@ -89,6 +87,7 @@ class RealFile implements File {
 
     @Override
     public void read(User user) {
+        readFileS3();
         System.out.println(user.getName() + " is reading the file: " + filename);
     }
 }
@@ -104,7 +103,7 @@ class FileProxy implements File {
 
     @Override
     public void read(User user) {
-        if (user.getRole().equals("admin") || user.getRole().equals("editor")) {
+        if (user.getRole().equals("netaji") || user.getRole().equals("daroga")) {
             if (realFile == null) {
                 realFile = new RealFile(filename); // Lazy initialization
             }
@@ -137,7 +136,7 @@ public class Main {
         User editor = new User("Charlie", "editor");
         User viewer = new User("Bob", "viewer");
 
-        File file = new FileProxy("design_doc.txt");
+        File file = new File("design_doc.txt");
 
         file.read(admin);   // ✅ Allowed
         file.read(editor);  // ✅ Allowed
