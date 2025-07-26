@@ -82,3 +82,121 @@ public class TransactionAPI {
 
 =====================================code with singleton design pattern starts below==========================
 
+public class SingletonExample {
+
+    // Singleton Database Connection
+    static class DatabaseConnection {
+        private static DatabaseConnection instance;
+        private static int counter = 0;
+        private int id;
+        private String s3LogFile;
+
+        // Private constructor to prevent external instantiation
+        private DatabaseConnection() {
+            id = ++counter;
+            this.s3LogFile = "s3://logs/db-log-singleton.txt";
+            System.out.println("✅ Singleton DB Connection #" + id + " created. Logging to: " + s3LogFile);
+        }
+
+        // Public method to provide access to the instance
+        public static DatabaseConnection getInstance() {
+            if (instance == null) {
+                instance = new DatabaseConnection();
+            }
+            return instance;
+        }
+
+        public void query(String sql) {
+            System.out.println("[" + s3LogFile + "] Executing: " + sql);
+        }
+    }
+
+    // Service that fetches user data
+    static class UserService {
+        public void fetchUserData() {
+            DatabaseConnection db = DatabaseConnection.getInstance();
+            db.query("SELECT * FROM users WHERE id = 123");
+        }
+    }
+
+    // Service that fetches cart items
+    static class CartService {
+        public void fetchCartItems() {
+            DatabaseConnection db = DatabaseConnection.getInstance();
+            db.query("SELECT * FROM cart WHERE user_id = 123");
+        }
+    }
+
+    // Service that creates a new order
+    static class OrderService {
+        public void createOrder() {
+            DatabaseConnection db = DatabaseConnection.getInstance();
+            db.query("INSERT INTO orders (user_id, item_id, qty) VALUES (123, 456, 2)");
+        }
+    }
+
+    // Service that clears the user's cart
+    static class CartCleanupService {
+        public void deleteCartItems() {
+            DatabaseConnection db = DatabaseConnection.getInstance();
+            db.query("DELETE FROM cart WHERE user_id = 123");
+        }
+    }
+
+    // Main class that simulates a transactional API call
+    public static void main(String[] args) {
+        System.out.println("---- Starting Transaction with Singleton ----");
+
+        UserService userService = new UserService();
+        CartService cartService = new CartService();
+        OrderService orderService = new OrderService();
+        CartCleanupService cartCleanupService = new CartCleanupService();
+
+        userService.fetchUserData();
+        cartService.fetchCartItems();
+
+        try {
+            orderService.createOrder(); // Suppose this fails in real world
+            cartCleanupService.deleteCartItems();
+        } catch (Exception e) {
+            System.out.println("❌ Order failed. Rolling back...");
+        }
+
+        System.out.println("---- Transaction Complete ----");
+    }
+}
+
+
+
+
+
+ratne ka tareeka: 
+whenever such sutuation comes , simply use static functions inside class because they can be used with object creation.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
