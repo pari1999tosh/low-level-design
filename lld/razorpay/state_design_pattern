@@ -1,1 +1,160 @@
+1.whenever there is a situation when you have a class object which can have mulitple state and behave differently in each state,
+  instead of writing if/else logic to maintain the behaviour and current state in same class. you have to decouple the logic 
+  of behaviour from the state in that class.
+
+without using this pattern your code will look something like this:
+
+public class OrderIfElse {
+    private String currentState;
+
+    public OrderIfElse() {
+        this.currentState = "Placed";
+    }
+
+    public void next() {
+        if (currentState.equals("Placed")) {
+            currentState = "Preparing";
+        } else if (currentState.equals("Preparing")) {
+            currentState = "OutForDelivery";
+        } else if (currentState.equals("OutForDelivery")) {
+            currentState = "Delivered";
+        } else if (currentState.equals("Delivered")) {
+            System.out.println("Order already delivered.");
+        } else if (currentState.equals("Cancelled")) {
+            System.out.println("Order was cancelled.");
+        }
+    }
+
+    public void cancel() {
+        if (currentState.equals("Placed") || currentState.equals("Preparing")) {
+            currentState = "Cancelled";
+        } else if (currentState.equals("OutForDelivery") || currentState.equals("Delivered")) {
+            System.out.println("Too late to cancel.");
+        }
+    }
+
+    public void printStatus() {
+        System.out.println("Current Status: " + currentState);
+    }
+
+    public static void main(String[] args) {
+        OrderIfElse order = new OrderIfElse();
+        order.printStatus();   // Placed
+        order.next();          // Preparing
+        order.printStatus();
+        order.cancel();        // Cancelled
+        order.printStatus();
+        order.next();          // No further state change
+    }
+}
+
+
+
+with static design pattern your code looks something like this:
+
+// OrderState interface
+interface OrderState {
+    void next(Order order);
+    void cancel(Order order);
+    String getStatus();
+}
+
+// Concrete States
+class PlacedState implements OrderState {
+    public void next(Order order) {
+        order.setState(new PreparingState());
+    }
+    public void cancel(Order order) {
+        order.setState(new CancelledState());
+    }
+    public String getStatus() {
+        return "Order Placed";
+    }
+}
+
+class PreparingState implements OrderState {
+    public void next(Order order) {
+        order.setState(new OutForDeliveryState());
+    }
+    public void cancel(Order order) {
+        order.setState(new CancelledState());
+    }
+    public String getStatus() {
+        return "Preparing Food";
+    }
+}
+
+class OutForDeliveryState implements OrderState {
+    public void next(Order order) {
+        order.setState(new DeliveredState());
+    }
+    public void cancel(Order order) {
+        System.out.println("Too late to cancel, order is out for delivery.");
+    }
+    public String getStatus() {
+        return "Out for Delivery";
+    }
+}
+
+class DeliveredState implements OrderState {
+    public void next(Order order) {
+        System.out.println("Order already delivered.");
+    }
+    public void cancel(Order order) {
+        System.out.println("Can't cancel delivered order.");
+    }
+    public String getStatus() {
+        return "Delivered";
+    }
+}
+
+class CancelledState implements OrderState {
+    public void next(Order order) {
+        System.out.println("Order was cancelled. No further action.");
+    }
+    public void cancel(Order order) {
+        System.out.println("Already cancelled.");
+    }
+    public String getStatus() {
+        return "Cancelled";
+    }
+}
+
+// Context class
+class Order {
+    private OrderState state;
+
+    public Order() {
+        this.state = new PlacedState();
+    }
+
+    public void setState(OrderState state) {
+        this.state = state;
+    }
+
+    public void next() {
+        state.next(this);
+    }
+
+    public void cancel() {
+        state.cancel(this);
+    }
+
+    public void printStatus() {
+        System.out.println("Current Status: " + state.getStatus());
+    }
+}
+
+// Driver
+public class OrderStatePattern {
+    public static void main(String[] args) {
+        Order order = new Order();
+        order.printStatus();   // Placed
+        order.next();          // Preparing
+        order.printStatus();
+        order.cancel();        // Cancelled
+        order.printStatus();
+        order.next();          // No further state change
+    }
+}
 
