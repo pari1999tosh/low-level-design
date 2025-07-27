@@ -21,6 +21,7 @@ public class OrderIfElse {
         } else if (currentState.equals("Delivered")) {
             System.out.println("Order already delivered.");
         } else if (currentState.equals("Cancelled")) {
+             
             System.out.println("Order was cancelled.");
         }
     }
@@ -37,7 +38,10 @@ public class OrderIfElse {
         System.out.println("Current Status: " + currentState);
     }
 
-    public static void main(String[] args) {
+    
+}
+
+public static void main(String[] args) {
         OrderIfElse order = new OrderIfElse();
         order.printStatus();   // Placed
         order.next();          // Preparing
@@ -45,7 +49,6 @@ public class OrderIfElse {
         order.cancel();        // Cancelled
         order.printStatus();
         order.next();          // No further state change
-    }
 }
 
 
@@ -61,12 +64,18 @@ interface OrderState {
 
 // Concrete States
 class PlacedState implements OrderState {
+
+    @override
     public void next(Order order) {
         order.setState(new PreparingState());
     }
+
+    @override
     public void cancel(Order order) {
         order.setState(new CancelledState());
     }
+
+    @override
     public String getStatus() {
         return "Order Placed";
     }
@@ -98,7 +107,7 @@ class OutForDeliveryState implements OrderState {
 
 class DeliveredState implements OrderState {
     public void next(Order order) {
-        System.out.println("Order already delivered.");
+        order.setState(new ReturnedState());
     }
     public void cancel(Order order) {
         System.out.println("Can't cancel delivered order.");
