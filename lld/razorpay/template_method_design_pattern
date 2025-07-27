@@ -1,0 +1,141 @@
+built a functionality to send notifications via different channel such as email, sms, push
+
+-Validates the recipient
+-Composes a message
+-Sends it
+-Logs the notification (common to all)
+
+
+
+without template method pattern:
+
+public class NotificationService {
+
+    public void sendNotification(String type, String recipient, String message) {
+        if (type.equalsIgnoreCase("email")) {
+            if (!recipient.contains("@")) {
+                System.out.println("Invalid email");
+                return;
+            }
+            System.out.println("Sending EMAIL to " + recipient + ": " + message);
+        } else if (type.equalsIgnoreCase("sms")) {
+            if (!recipient.matches("\\d{10}")) {
+                System.out.println("Invalid phone number");
+                return;
+            }
+            System.out.println("Sending SMS to " + recipient + ": " + message);
+        } else if (type.equalsIgnoreCase("push")) {
+            if (!recipient.startsWith("device_")) {
+                System.out.println("Invalid push token");
+                return;
+            }
+            System.out.println("Sending PUSH to " + recipient + ": " + message);
+        } else {
+            System.out.println("Unknown type");
+            return;
+        }
+
+        System.out.println("Notification logged.");
+    }
+}
+
+
+
+with design pattern:
+
+abstract class NotificationSender {
+
+    // Template method
+    public final void sendNotification(String recipient, String message) {
+        if (!validate(recipient)) {
+            System.out.println("Validation failed.");
+            return;
+        }
+
+        composeMessage(message);
+        send(recipient);
+        log();
+    }
+
+    protected abstract boolean validate(String recipient);
+    protected abstract void composeMessage(String message);
+    protected abstract void send(String recipient);
+
+    protected void log() {
+        System.out.println("Notification logged.");
+    }
+}
+
+// --- Email ---
+class EmailNotification extends NotificationSender {
+    private String composedMessage;
+
+    @Override
+    protected boolean validate(String recipient) {
+        return recipient.contains("@");
+    }
+
+    @Override
+    protected void composeMessage(String message) {
+        this.composedMessage = "Email Content: " + message;
+    }
+
+    @Override
+    protected void send(String recipient) {
+        System.out.println("Sending EMAIL to " + recipient + ": " + composedMessage);
+    }
+}
+
+// --- SMS ---
+class SMSNotification extends NotificationSender {
+    private String composedMessage;
+
+    @Override
+    protected boolean validate(String recipient) {
+        return recipient.matches("\\d{10}");
+    }
+
+    @Override
+    protected void composeMessage(String message) {
+        this.composedMessage = "SMS Content: " + message;
+    }
+
+    @Override
+    protected void send(String recipient) {
+        System.out.println("Sending SMS to " + recipient + ": " + composedMessage);
+    }
+}
+
+// --- Push ---
+class PushNotification extends NotificationSender {
+    private String composedMessage;
+
+    @Override
+    protected boolean validate(String recipient) {
+        return recipient.startsWith("device_");
+    }
+
+    @Override
+    protected void composeMessage(String message) {
+        this.composedMessage = "Push Alert: " + message;
+    }
+
+    @Override
+    protected void send(String recipient) {
+        System.out.println("Sending PUSH to " + recipient + ": " + composedMessage);
+    }
+}
+
+// --- Main ---
+public class TemplateMethodDemo {
+    public static void main(String[] args) {
+        NotificationSender email = new EmailNotification();
+        NotificationSender sms = new SMSNotification();
+        NotificationSender push = new PushNotification();
+
+        email.sendNotification("user@example.com", "Welcome to our service!");
+        sms.sendNotification("9876543210", "Your OTP is 123456");
+        push.sendNotification("device_abc123", "You have a new message");
+    }
+}
+
