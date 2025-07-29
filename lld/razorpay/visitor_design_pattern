@@ -114,6 +114,8 @@ class Pilot implements Person {
     }
 }
 
+Pilot.accept(new IDCheckVisitor())
+
 class Passenger implements Person {
     @Override
     public void accept(SecurityVisitor visitor) {
@@ -182,6 +184,23 @@ class BodyScanVisitor implements SecurityVisitor {
     }
 }
 
+class CovidCheckVisitor implements SecurityVisitor {
+    @Override
+    public void visit(Pilot pilot) {
+        System.out.println("Pilot cleared via uniform scan.");
+    }
+
+    @Override
+    public void visit(Passenger passenger) {
+        System.out.println("Performing full-body scan on passenger.");
+    }
+
+    @Override
+    public void visit(VIP vip) {
+        System.out.println("Escorting VIP through premium scanner.");
+    }
+}
+
 // Client Code
 public class AirportSecurity {
     public static void main(String[] args) {
@@ -194,7 +213,8 @@ public class AirportSecurity {
         List<SecurityVisitor> securitySteps = List.of(
             new IDCheckVisitor(),
             new BagCheckVisitor(),
-            new BodyScanVisitor()
+            new BodyScanVisitor(),
+            new CovidCheckVisitor(),
         );
 
         for (SecurityVisitor step : securitySteps) {
