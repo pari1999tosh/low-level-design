@@ -1,0 +1,187 @@
+without design pattern:
+import java.util.List;
+
+// Common interface
+interface Person {
+    void checkID();
+    void covidTest();
+}
+
+// Concrete classes handling their own logic
+class Pilot implements Person {
+    @Override
+    public void checkID() {
+        System.out.println("Checking pilot ID via crew badge.");
+    }
+
+    @Override
+    public void covidTest() {
+        System.out.println("PCR test for pilot.");
+    }
+}
+
+class Passenger implements Person {
+    @Override
+    public void checkID() {
+        System.out.println("Checking passenger ID against boarding pass.");
+    }
+
+    @Override
+    public void covidTest() {
+        System.out.println("Rapid test for passenger.");
+    }
+}
+
+class VIP implements Person {
+    @Override
+    public void checkID() {
+        System.out.println("Auto-verifying VIP identity.");
+    }
+
+    @Override
+    public void covidTest() {
+        System.out.println("Skipping COVID test for VIP.");
+    }
+}
+
+// Client Code
+public class AirportSecurity {
+    public static void main(String[] args) {
+        List<Person> people = List.of(
+            new Pilot(),
+            new Passenger(),
+            new VIP()
+        );
+
+        System.out.println("== ID Check ==");
+        for (Person person : people) {
+            person.checkID();
+        }
+
+        System.out.println("\n== COVID Test ==");
+        for (Person person : people) {
+            person.covidTest();
+        }
+    }
+}
+
+
+
+with visitor design pattern:
+
+import java.util.List;
+
+// Visitor Interface
+interface SecurityVisitor {
+    void visit(Pilot pilot);
+    void visit(Passenger passenger);
+    void visit(VIP vip);
+}
+
+// Element Interface
+interface Person {
+    void accept(SecurityVisitor visitor);
+}
+
+// Concrete Elements
+class Pilot implements Person {
+    @Override
+    public void accept(SecurityVisitor visitor) {
+        visitor.visit(this);
+    }
+}
+
+class Passenger implements Person {
+    @Override
+    public void accept(SecurityVisitor visitor) {
+        visitor.visit(this);
+    }
+}
+
+class VIP implements Person {
+    @Override
+    public void accept(SecurityVisitor visitor) {
+        visitor.visit(this);
+    }
+}
+
+// Concrete Visitor: ID Check
+class IDCheckVisitor implements SecurityVisitor {
+    @Override
+    public void visit(Pilot pilot) {
+        System.out.println("Checking pilot ID via crew badge.");
+    }
+
+    @Override
+    public void visit(Passenger passenger) {
+        System.out.println("Checking passenger ID against boarding pass.");
+    }
+
+    @Override
+    public void visit(VIP vip) {
+        System.out.println("Auto-verifying VIP identity.");
+    }
+}
+
+// Concrete Visitor: COVID Test
+class CovidTestVisitor implements SecurityVisitor {
+    @Override
+    public void visit(Pilot pilot) {
+        System.out.println("PCR test for pilot.");
+    }
+
+    @Override
+    public void visit(Passenger passenger) {
+        System.out.println("Rapid test for passenger.");
+    }
+
+    @Override
+    public void visit(VIP vip) {
+        System.out.println("Skipping COVID test for VIP.");
+    }
+}
+
+// Client Code
+public class AirportSecurity {
+    public static void main(String[] args) {
+        List<Person> people = List.of(
+            new Pilot(),
+            new Passenger(),
+            new VIP()
+        );
+
+        SecurityVisitor idCheck = new IDCheckVisitor();
+        SecurityVisitor covidTest = new CovidTestVisitor();
+
+        System.out.println("== ID Check ==");
+        for (Person person : people) {
+            person.accept(idCheck);
+        }
+
+        System.out.println("\n== COVID Test ==");
+        for (Person person : people) {
+            person.accept(covidTest);
+        }
+    }
+}
+
+
+
+software development analogy:
+
+suppose you want to build vscode where multiple languages are supported and extensions are allowed to add.
+high possibility that a new extension will come, but highly unlikely a new programming language will come.
+we can apply visitor design pattern here
+
+
+
+
+
+ratne ka tareeka:
+
+whenever in a system, a task is to be done(security check). there are mulitple entities on which the task is to be done(passenger, VIP, crew,pilot) and there are series of steps for doing the task on these entities.
+if it is highly unlikely that some new entities will come, but there is a very high chance of some new step adding in the series of steps that needs to be applied to do the task on these entities
+we use visitor design pattern in following way:
+1.instead of creating enties classes and giving the series of steps to these classes.
+2.we create visitor classes for each of these steps  and each visitor class will have overriden function
+  for visiting different entities.
