@@ -1,51 +1,68 @@
 without design pattern:
+
 import java.util.List;
 
-// Common interface
+// Common Interface
 interface Person {
-    void checkID();
-    void covidTest();
+    void idCheck();
+    void bagCheck();
+    void bodyScan();
 }
 
-// Concrete classes handling their own logic
+// Concrete Classes
 class Pilot implements Person {
     @Override
-    public void checkID() {
+    public void idCheck() {
         System.out.println("Checking pilot ID via crew badge.");
     }
 
     @Override
-    public void covidTest() {
-        System.out.println("PCR test for pilot.");
+    public void bagCheck() {
+        System.out.println("Skimming pilot's bag for restricted items.");
+    }
+
+    @Override
+    public void bodyScan() {
+        System.out.println("Pilot cleared via uniform scan.");
     }
 }
 
 class Passenger implements Person {
     @Override
-    public void checkID() {
+    public void idCheck() {
         System.out.println("Checking passenger ID against boarding pass.");
     }
 
     @Override
-    public void covidTest() {
-        System.out.println("Rapid test for passenger.");
+    public void bagCheck() {
+        System.out.println("Running passenger bag through scanner.");
+    }
+
+    @Override
+    public void bodyScan() {
+        System.out.println("Performing full-body scan on passenger.");
     }
 }
 
 class VIP implements Person {
     @Override
-    public void checkID() {
+    public void idCheck() {
         System.out.println("Auto-verifying VIP identity.");
     }
 
     @Override
-    public void covidTest() {
-        System.out.println("Skipping COVID test for VIP.");
+    public void bagCheck() {
+        System.out.println("Politely requesting VIP to allow bag check.");
+    }
+
+    @Override
+    public void bodyScan() {
+        System.out.println("Escorting VIP through premium scanner.");
     }
 }
 
 // Client Code
-public class AirportSecurity {
+public class AirportSecurityWithoutVisitor {
     public static void main(String[] args) {
         List<Person> people = List.of(
             new Pilot(),
@@ -53,17 +70,23 @@ public class AirportSecurity {
             new VIP()
         );
 
-        System.out.println("== ID Check ==");
+        System.out.println("=== ID Check ===");
         for (Person person : people) {
-            person.checkID();
+            person.idCheck();
         }
 
-        System.out.println("\n== COVID Test ==");
+        System.out.println("\n=== Bag Check ===");
         for (Person person : people) {
-            person.covidTest();
+            person.bagCheck();
+        }
+
+        System.out.println("\n=== Body Scan ===");
+        for (Person person : people) {
+            person.bodyScan();
         }
     }
 }
+
 
 
 
@@ -105,7 +128,7 @@ class VIP implements Person {
     }
 }
 
-// Concrete Visitor: ID Check
+// Step 1: ID Check
 class IDCheckVisitor implements SecurityVisitor {
     @Override
     public void visit(Pilot pilot) {
@@ -123,21 +146,39 @@ class IDCheckVisitor implements SecurityVisitor {
     }
 }
 
-// Concrete Visitor: COVID Test
-class CovidTestVisitor implements SecurityVisitor {
+// Step 2: Bag Check
+class BagCheckVisitor implements SecurityVisitor {
     @Override
     public void visit(Pilot pilot) {
-        System.out.println("PCR test for pilot.");
+        System.out.println("Skimming pilot's bag for restricted items.");
     }
 
     @Override
     public void visit(Passenger passenger) {
-        System.out.println("Rapid test for passenger.");
+        System.out.println("Running passenger bag through scanner.");
     }
 
     @Override
     public void visit(VIP vip) {
-        System.out.println("Skipping COVID test for VIP.");
+        System.out.println("Politely requesting VIP to allow bag check.");
+    }
+}
+
+// Step 3: Body Scan
+class BodyScanVisitor implements SecurityVisitor {
+    @Override
+    public void visit(Pilot pilot) {
+        System.out.println("Pilot cleared via uniform scan.");
+    }
+
+    @Override
+    public void visit(Passenger passenger) {
+        System.out.println("Performing full-body scan on passenger.");
+    }
+
+    @Override
+    public void visit(VIP vip) {
+        System.out.println("Escorting VIP through premium scanner.");
     }
 }
 
@@ -150,20 +191,21 @@ public class AirportSecurity {
             new VIP()
         );
 
-        SecurityVisitor idCheck = new IDCheckVisitor();
-        SecurityVisitor covidTest = new CovidTestVisitor();
+        List<SecurityVisitor> securitySteps = List.of(
+            new IDCheckVisitor(),
+            new BagCheckVisitor(),
+            new BodyScanVisitor()
+        );
 
-        System.out.println("== ID Check ==");
-        for (Person person : people) {
-            person.accept(idCheck);
-        }
-
-        System.out.println("\n== COVID Test ==");
-        for (Person person : people) {
-            person.accept(covidTest);
+        for (SecurityVisitor step : securitySteps) {
+            System.out.println("\n=== " + step.getClass().getSimpleName() + " ===");
+            for (Person person : people) {
+                person.accept(step);
+            }
         }
     }
 }
+
 
 
 
