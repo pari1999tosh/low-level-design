@@ -24,6 +24,180 @@ memento design pattern:
 
 
 
+---suppose you have to build the functionality where user can save games into slots or quick save.
+---user should be able to load game from slots or quick load.
+
+without memento pattern:
+
+// GameState class with getters and setters exposed
+class GameState {
+    private int level;
+    private int score;
+    private int health;
+    private String playerName;
+    private int[] inventory;
+
+    public GameState(String playerName) {
+        this.playerName = playerName;
+        this.level = 1;
+        this.score = 0;
+        this.health = 100;
+        this.inventory = new int[10]; // Empty inventory
+    }
+
+    // Game logic
+    public void levelUp() {
+        level++;
+        health = 100;
+        System.out.println("Level up! Now at level " + level);
+    }
+
+    public void addScore(int points) {
+        score += points;
+        System.out.println("Score increased by " + points + ". Total: " + score);
+    }
+
+    public void takeDamage(int damage) {
+        health -= damage;
+        if (health < 0) health = 0;
+        System.out.println("Took " + damage + " damage. Health: " + health);
+    }
+
+    public void addItem(int itemId) {
+        for (int i = 0; i < inventory.length; i++) {
+            if (inventory[i] == 0) {
+                inventory[i] = itemId;
+                System.out.println("Added item " + itemId + " to inventory");
+                break;
+            }
+        }
+    }
+
+    public void displayStatus() {
+        System.out.println("=== Game Status ===");
+        System.out.println("Player: " + playerName);
+        System.out.println("Level: " + level);
+        System.out.println("Score: " + score);
+        System.out.println("Health: " + health);
+        System.out.print("Inventory: ");
+        for (int item : inventory) {
+            if (item != 0) System.out.print(item + " ");
+        }
+        System.out.println("\n");
+    }
+
+    // Getters and Setters
+    public int getLevel() { return level; }
+    public void setLevel(int level) { this.level = level; }
+
+    public int getScore() { return score; }
+    public void setScore(int score) { this.score = score; }
+
+    public int getHealth() { return health; }
+    public void setHealth(int health) { this.health = health; }
+
+    public int[] getInventory() { return inventory.clone(); }
+    public void setInventory(int[] inventory) { this.inventory = inventory.clone(); }
+}
+
+// SaveManager manually saves primitive fields
+class SaveManager {
+    private int quickLevel;
+    private int quickScore;
+    private int quickHealth;
+    private int[] quickInventory;
+
+    private int[][] slotLevels = new int[3][];
+    private int[][] slotScores = new int[3][];
+    private int[][] slotHealths = new int[3][];
+    private int[][] slotInventories = new int[3][];
+
+    public void quickSave(GameState game) {
+        quickLevel = game.getLevel();
+        quickScore = game.getScore();
+        quickHealth = game.getHealth();
+        quickInventory = game.getInventory();
+        System.out.println("Quick save created!");
+    }
+
+    public void quickLoad(GameState game) {
+        if (quickInventory != null) {
+            game.setLevel(quickLevel);
+            game.setScore(quickScore);
+            game.setHealth(quickHealth);
+            game.setInventory(quickInventory);
+            System.out.println("Quick save loaded!");
+        } else {
+            System.out.println("No quick save found!");
+        }
+    }
+
+    public void saveToSlot(GameState game, int slot) {
+        if (slot >= 0 && slot < 3) {
+            slotLevels[slot] = new int[] { game.getLevel() };
+            slotScores[slot] = new int[] { game.getScore() };
+            slotHealths[slot] = new int[] { game.getHealth() };
+            slotInventories[slot] = game.getInventory();
+            System.out.println("Game saved to slot " + (slot + 1));
+        } else {
+            System.out.println("Invalid slot!");
+        }
+    }
+
+    public void loadFromSlot(GameState game, int slot) {
+        if (slot >= 0 && slot < 3 && slotInventories[slot] != null) {
+            game.setLevel(slotLevels[slot][0]);
+            game.setScore(slotScores[slot][0]);
+            game.setHealth(slotHealths[slot][0]);
+            game.setInventory(slotInventories[slot]);
+            System.out.println("Game loaded from slot " + (slot + 1));
+        } else {
+            System.out.println("No save found in slot " + (slot + 1));
+        }
+    }
+}
+
+// Main class
+public class NoMementoGameExample {
+    public static void main(String[] args) {
+        GameState game = new GameState("Player1");
+        SaveManager saveManager = new SaveManager();
+
+        game.displayStatus();
+
+        game.addScore(100);
+        game.addItem(5);
+        game.addItem(3);
+        game.levelUp();
+
+        game.displayStatus();
+
+        saveManager.saveToSlot(game, 0);
+        saveManager.quickSave(game);
+
+        game.addScore(200);
+        game.takeDamage(30);
+        game.levelUp();
+        game.addItem(7);
+
+        System.out.println("After more gameplay:");
+        game.displayStatus();
+
+        System.out.println("Loading previous save...");
+        saveManager.loadFromSlot(game, 0);
+        game.displayStatus();
+
+        game.takeDamage(50);
+        System.out.println("After taking damage:");
+        game.displayStatus();
+
+        System.out.println("Loading quick save...");
+        saveManager.quickLoad(game);
+        game.displayStatus();
+    }
+}
+
+
 
 
 class GameSave {
