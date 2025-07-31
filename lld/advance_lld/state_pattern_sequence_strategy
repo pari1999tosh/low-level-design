@@ -202,3 +202,24 @@ public class OrderStatePattern {
         // order.next(); // Will now pick randomly
     }
 }
+
+
+mentos point:
+if u look at  SequentialTransitionStrategy, it has if/else logic. in all my video i have explained that we should always remove 
+if/else logic because if new conditon comes, we will have to modify current class which is against open/closed principle.
+but this is strategy class, if a new if/else condition comes, we will define a new strategy itself without modifying 
+SequentialTransitionStrategy class.
+
+bonus point: if/else is allowed inside strategy classes, unless you are creating an object inside it. now you tell me in comments
+which design pattern do we use if we need to create objects of different classes based on some if/else class.
+
+
+
+
+
+
+
+
+
+
+
