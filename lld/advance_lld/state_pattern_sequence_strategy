@@ -213,6 +213,9 @@ SequentialTransitionStrategy class.
 bonus point: if/else is allowed inside strategy classes, unless you are creating an object inside it. now you tell me in comments
 which design pattern do we use if we need to create objects of different classes based on some if/else class.
 
+hint: in one of my shorts I have explained that there is a pattern which is used to create objects of a class without
+      exposing instantiation logic.
+
 
 
 
