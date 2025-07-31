@@ -1,6 +1,7 @@
 how would you handle the case when the next sequence is random.
 in our state design pattern video, each state class was having next function to move the order to next state.
-so the state transfer logic was linear: placedState->preparingState/packaging->outfordelivery->delivered.
+so the state transfer logic was linear: 
+placedState->preparingState/packaging->outfordelivery->delivered.
 suppose tomorrow comes the requirement where you want to include another state between preparing and out for delivery,
 you will have to change the next logic of preparing.or suppose hypothetically you want the state transfer logic to be reversed.
 suppose someone return the order, then 
@@ -13,6 +14,25 @@ and instead of hardcoding the logic in a class, we pass the strategy class objec
 an interface, so we pass interface object and this interface object can contain reference of any clas sobject which is
 implementing it.
 
+
+1.in ourcase :
+   - work is to transfer the state of object to next state.
+   - there are multiple strategies to transfer state.
+      - linear (order vegentable cheese maggie).
+      - reversed-linear(return badminton set(cover, shuttle box, badminton, BG65 string)).
+      - random order(ordering helmet(doesn't required preparing state, directly packed))
+
+steps to implement strategy pattern:
+1. create multiple classes for each strategy, if a new requirement comes in future which forces you to modify the functionality
+   inside any of existing strategy class, Don't do it in that class. create anew strategy class.
+2.since all these classes are relatable, create an interface for them and all these classes will implement them.
+3.the class in which you are using the functionality of strategy class, now create a datamember of type above interface,
+  this object of interface can refer to any of the object of strategy classes because if a class implements an interface,
+  then the obnject of the class can be referenced via object of interface.
+
+
+
+
 lets see how we will do it:
 
 import java.util.*;
@@ -22,10 +42,13 @@ import java.util.*;
 // Strategy interface to inject different transition behaviors
 interface TransitionStrategy {
     OrderState getNextState(Order order);
+    
 }
 
 // Strategy: Defines a fixed sequence for order transitions
 class SequentialTransitionStrategy implements TransitionStrategy {
+    
+    @override
     public OrderState getNextState(Order order) {
         String current = order.getStatus();
         switch (current) {
@@ -45,6 +68,7 @@ class SequentialTransitionStrategy implements TransitionStrategy {
 class RandomTransitionStrategy implements TransitionStrategy {
     private final Random random = new Random();
 
+    @override
     public OrderState getNextState(Order order) {
         List<OrderState> possibleStates = Arrays.asList(
             new PlacedState(),
@@ -143,7 +167,8 @@ class CancelledState implements OrderState {
 // Order context class now delegates transition logic to injected strategy
 class Order {
     private OrderState state;
-    private TransitionStrategy transitionStrategy; // NEW: Injected strategy
+    
+    private TransitionStrategy transitionStrategy; for veg-maggie-sequentialStrategy,returning badminton-reverseSequential 
 
     public Order(TransitionStrategy strategy) {
         this.state = new PlacedState();
@@ -202,6 +227,13 @@ public class OrderStatePattern {
         // order.next(); // Will now pick randomly
     }
 }
+
+
+1.strategy        initialState       ex
+  sequenStra       placed             veg-maggie
+  reversequstr     outfordev          return badmintons set
+
+
 
 
 mentos point:
