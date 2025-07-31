@@ -93,6 +93,18 @@ class PreparingState implements OrderState {
     }
 }
 
+class PrackaginState implements OrderState {
+    public void next(Order order) {
+        order.setState(new OutForDeliveryState());
+    }
+    public void cancel(Order order) {
+        order.setState(new CancelledState());
+    }
+    public String getStatus() {
+        return "Preparing Food";
+    }
+}
+
 class OutForDeliveryState implements OrderState {
     public void next(Order order) {
         order.setState(new DeliveredState());
@@ -132,7 +144,7 @@ class CancelledState implements OrderState {
 // Context class
 class Order {
     private OrderState state;
-
+   
     public Order() {
         this.state = new PlacedState();
     }
@@ -140,7 +152,8 @@ class Order {
     public void setState(OrderState state) {
         this.state = state;
     }
-
+    
+    
     public void next() {
         state.next(this);
     }
