@@ -1,0 +1,204 @@
+how would you handle the case when the next sequence is random.
+in our state design pattern video, each state class was having next function to move the order to next state.
+so the state transfer logic was linear: placedState->preparingState/packaging->outfordelivery->delivered.
+suppose tomorrow comes the requirement where you want to include another state between preparing and out for delivery,
+you will have to change the next logic of preparing.or suppose hypothetically you want the state transfer logic to be reversed.
+suppose someone return the order, then 
+placedState->outfordelivery->delivered->unpacked.
+
+in such case you will have to change next function of each class.
+
+there can be mulitple ways of state transfer logic, whenever multiple ways are there to do any task. we use strategy design pattern
+and instead of hardcoding the logic in a class, we pass the strategy class object to it, since all strategy class implements
+an interface, so we pass interface object and this interface object can contain reference of any clas sobject which is
+implementing it.
+
+lets see how we will do it:
+
+import java.util.*;
+
+// -------------------- Strategy Pattern --------------------
+
+// Strategy interface to inject different transition behaviors
+interface TransitionStrategy {
+    OrderState getNextState(Order order);
+}
+
+// Strategy: Defines a fixed sequence for order transitions
+class SequentialTransitionStrategy implements TransitionStrategy {
+    public OrderState getNextState(Order order) {
+        String current = order.getStatus();
+        switch (current) {
+            case "Order Placed":
+                return new PreparingState();
+            case "Preparing Food":
+                return new OutForDeliveryState();
+            case "Out for Delivery":
+                return new DeliveredState();
+            default:
+                return new CancelledState(); // fallback or end state
+        }
+    }
+}
+
+// Strategy: Picks next state randomly (demo/testing purpose)
+class RandomTransitionStrategy implements TransitionStrategy {
+    private final Random random = new Random();
+
+    public OrderState getNextState(Order order) {
+        List<OrderState> possibleStates = Arrays.asList(
+            new PlacedState(),
+            new PreparingState(),
+            new OutForDeliveryState(),
+            new DeliveredState(),
+            new CancelledState()
+        );
+        return possibleStates.get(random.nextInt(possibleStates.size()));
+    }
+}
+
+// -------------------- State Pattern --------------------
+
+// Updated interface: transition decision now comes from outside via 'nextState'
+interface OrderState {
+    void handleTransition(Order order, OrderState nextState);
+    void cancel(Order order);
+    String getStatus();
+}
+
+// PlacedState now delegates next state externally
+class PlacedState implements OrderState {
+    public void handleTransition(Order order, OrderState nextState) {
+        order.setState(nextState); // accepts externally injected next state
+    }
+
+    public void cancel(Order order) {
+        order.setState(new CancelledState());
+    }
+
+    public String getStatus() {
+        return "Order Placed";
+    }
+}
+
+// Similar changes for other states below — no hardcoded transitions
+class PreparingState implements OrderState {
+    public void handleTransition(Order order, OrderState nextState) {
+        order.setState(nextState);
+    }
+
+    public void cancel(Order order) {
+        order.setState(new CancelledState());
+    }
+
+    public String getStatus() {
+        return "Preparing Food";
+    }
+}
+
+class OutForDeliveryState implements OrderState {
+    public void handleTransition(Order order, OrderState nextState) {
+        order.setState(nextState);
+    }
+
+    public void cancel(Order order) {
+        System.out.println("Too late to cancel, order is out for delivery.");
+    }
+
+    public String getStatus() {
+        return "Out for Delivery";
+    }
+}
+
+class DeliveredState implements OrderState {
+    public void handleTransition(Order order, OrderState nextState) {
+        order.setState(nextState);
+    }
+
+    public void cancel(Order order) {
+        System.out.println("Can't cancel delivered order.");
+    }
+
+    public String getStatus() {
+        return "Delivered";
+    }
+}
+
+class CancelledState implements OrderState {
+    public void handleTransition(Order order, OrderState nextState) {
+        System.out.println("Order was cancelled. No further action.");
+    }
+
+    public void cancel(Order order) {
+        System.out.println("Already cancelled.");
+    }
+
+    public String getStatus() {
+        return "Cancelled";
+    }
+}
+
+// -------------------- Context Class --------------------
+
+// Order context class now delegates transition logic to injected strategy
+class Order {
+    private OrderState state;
+    private TransitionStrategy transitionStrategy; // NEW: Injected strategy
+
+    public Order(TransitionStrategy strategy) {
+        this.state = new PlacedState();
+        this.transitionStrategy = strategy;
+    }
+
+    // Allows swapping strategy at runtime
+    public void setTransitionStrategy(TransitionStrategy strategy) {
+        this.transitionStrategy = strategy;
+    }
+
+    public void setState(OrderState state) {
+        this.state = state;
+    }
+
+    // No longer hardcoded — uses injected transition strategy
+    public void next() {
+        OrderState nextState = transitionStrategy.getNextState(this);
+        state.handleTransition(this, nextState);
+    }
+
+    public void cancel() {
+        state.cancel(this);
+    }
+
+    public void printStatus() {
+        System.out.println("Current Status: " + state.getStatus());
+    }
+
+    public String getStatus() {
+        return state.getStatus();
+    }
+}
+
+// -------------------- Driver Code --------------------
+
+public class OrderStatePattern {
+    public static void main(String[] args) {
+        // Inject a transition strategy — can switch here
+        TransitionStrategy strategy = new SequentialTransitionStrategy();
+        // TransitionStrategy strategy = new RandomTransitionStrategy();
+
+        Order order = new Order(strategy);  // Injecting the strategy
+
+        order.printStatus(); // Placed
+        order.next();        // Preparing
+        order.printStatus();
+        order.next();        // Out for Delivery
+        order.printStatus();
+        order.cancel();      // Too late to cancel
+        order.next();        // Delivered
+        order.printStatus();
+
+        // Can even switch strategy at runtime:
+        // order.setTransitionStrategy(new RandomTransitionStrategy());
+        // order.next(); // Will now pick randomly
+    }
+}
