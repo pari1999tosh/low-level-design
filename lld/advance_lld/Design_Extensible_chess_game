@@ -1,0 +1,363 @@
+laymen design:
+
+class GameBoard(){
+    hashMap<string, Piece> pos;
+    
+    GameBoard(){
+      reset();  
+    }
+    
+    reset(){
+        // set this.pos
+        // run for loop and create new Pieces for initial position
+        // A1 = new Piece(rook, white)
+    }
+    
+    move(string initialPosition,string finalPosition,string color){
+        //apply checks whether piece at initialPosition has valid
+        //move for final Position(if move is for raja, check he will not go in
+        //danger)
+        //if possible, update positions 
+        //delet entry from pos for initialPosition and add an entry
+        //with final Position with the same piece that was at initialPosition
+        checkStaleMate();
+        checkCheckMate();
+        
+        
+    }
+    
+    checkStaleMate(){
+        //findOppositeKaraja();
+        //logic to check if raja is in danger
+        //for all pieces of opposite colour , check if they can tackle raja
+        //if yes,then check for checkMate()
+           if(checkMate())
+             return "checkMate"
+            
+        //else return "staleMate"
+        
+    }
+    
+    checkCheckMate(){
+        //findWhiteKaraja();
+        //logic to check if white ka raja is check
+    }
+}
+
+class Pieces {
+    string type;
+    string colour;
+    
+    
+}
+
+class Main {
+    
+    
+    
+    GameBoard board = new GameBoard();
+    string color = "white";
+    S.O.P("player 1 turn");
+    board.move("H8", "G8",color)
+    
+}
+
+
+problems:
+1.GameBoard class has multiple problems:
+
+Single Responsibility: Each class focuses on one job, improving clarity and maintainability.(move function is double respo)
+
+- Avoid Duplication: Shared logic can be reused across multiple game modes or variants via service class.
+  - suppose tomorrow we want customGameBoard that has 16*16 size and some extra piece of existing type.
+  - move function will be same but we will have to define it again in customeGameBoardClass.
+  - code reusability
+
+- Open/Closed Principle: You can add new behavior without modifying existing classes.
+  - even if u seperate the move function out  to seperate service class, suppose for customGameBoard class,
+  - move logic changes. you will have to create another move function in service class(violation of open close principle)
+  - multiple ways to do a task, so use strategie pattern for service class.
+  - these kind of counter questions will come, though you are not expected to deter from your implementation
+  - you will just have to tell them we can use this thing here.
+    
+    interface MoveStrategy {
+      boolean move(GameBoard board, String from, String to, String color);
+    }
+
+    class StandardMoveService implements MoveStrategy {
+        public boolean move(GameBoard board, String from, String to, String color) {
+            // classic chess move logic
+        }
+    }
+    
+    class Chess960MoveService implements MoveStrategy {
+          public boolean move(GameBoard board, String from, String to, String color) {
+              // different logic due to shuffled back rank
+          }
+      }
+  
+      class GameBoard {
+      private MoveStrategy moveStrategy;
+  
+      public GameBoard(MoveStrategy moveStrategy) {
+          this.moveStrategy = moveStrategy;
+      }
+  
+      public void move(String from, String to, String color) {
+          moveStrategy.move(this, from, to, color);
+      }
+  }
+
+
+ - movement is related to piece, each piece moves in a different way:
+   Right now, Piece is just a bag of data (type, color). It doesn't encapsulate behavior.
+
+    If you ever want different move logic for each piece type (Rook, Knight, Queen), you'll have to do:
+    
+    
+    if (piece.type == "Rook") { // move logic }
+    This breaks OCP and LSP.
+    
+    ✅ Fix: Make Piece an abstract class or interface, and create subclasses:
+    
+    
+    abstract class Piece {
+        String color;
+        abstract boolean isValidMove(String from, String to, GameBoard board);
+    }
+    
+    class Rook extends Piece { ... }
+    class Knight extends Piece { ... }
+    Now the board can call:
+    
+    
+    piece.isValidMove(from, to, board);
+
+
+
+
+
+
+
+
+
+
+
+=================================================better Design ===================================================
+
+
+// ChessGame.java
+
+// Enums
+enum Color {
+    WHITE, BLACK
+}
+
+enum PieceType {
+    KING, QUEEN, ROOK, BISHOP, KNIGHT, PAWN
+}
+
+// Position Classes
+class Move {
+    int fromRow, fromCol;
+    int toRow, toCol;
+
+    public Move(int fromRow, int fromCol, int toRow, int toCol) {
+        this.fromRow = fromRow;
+        this.fromCol = fromCol;
+        this.toRow = toRow;
+        this.toCol = toCol;
+    }
+}
+
+class Square {
+    int row, col;
+    Piece piece;
+
+    public Square(int row, int col) {
+        this.row = row;
+        this.col = col;
+    }
+
+    public boolean isOccupied() {
+        return piece != null;
+    }
+}
+
+// Strategy Pattern: Movement Strategy Interface
+interface MoveStrategy {
+    boolean isValidMove(Board board, Move move, Color color);
+}
+
+// Concrete Strategies (example: Pawn only, rest can be added similarly)
+class PawnMoveStrategy implements MoveStrategy {
+    @Override
+    public boolean isValidMove(Board board, Move move, Color color) {
+        int dir = (color == Color.WHITE) ? -1 : 1;
+        int startRow = (color == Color.WHITE) ? 6 : 1;
+
+        Square from = board.getSquare(move.fromRow, move.fromCol);
+        Square to = board.getSquare(move.toRow, move.toCol);
+
+        if (move.toCol == move.fromCol && !to.isOccupied()) {
+            if (move.toRow == move.fromRow + dir) return true;
+            if (move.toRow == move.fromRow + 2 * dir && move.fromRow == startRow) return true;
+        }
+
+        if (Math.abs(move.toCol - move.fromCol) == 1 && move.toRow == move.fromRow + dir && to.isOccupied()) {
+            return to.piece.color != color;
+        }
+
+        return false;
+    }
+}
+
+// Abstract Piece Class
+abstract class Piece {
+    Color color;
+    MoveStrategy moveStrategy;
+    PieceType type;
+
+    public Piece(Color color, MoveStrategy strategy, PieceType type) {
+        this.color = color;
+        this.moveStrategy = strategy;
+        this.type = type;
+    }
+
+    public boolean canMove(Board board, Move move) {
+        return moveStrategy.isValidMove(board, move, color);
+    }
+}
+
+// Concrete Piece: Pawn Example
+class Pawn extends Piece {
+    public Pawn(Color color) {
+        super(color, new PawnMoveStrategy(), PieceType.PAWN);
+    }
+}
+
+// Add Knight, Rook, etc. similarly by creating respective strategy classes
+
+// Board Class
+class Board {
+    private final Square[][] squares = new Square[8][8];
+
+    public Board() {
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                squares[i][j] = new Square(i, j);
+            }
+        }
+    }
+
+    public Square getSquare(int row, int col) {
+        return squares[row][col];
+    }
+
+    public void placePiece(int row, int col, Piece piece) {
+        squares[row][col].piece = piece;
+    }
+}
+
+// Piece Factory
+class PieceFactory {
+    public static Piece createPiece(PieceType type, Color color) {
+        switch (type) {
+            case PAWN: return new Pawn(color);
+            // Add cases for other piece types
+            default: throw new IllegalArgumentException("Unsupported piece type");
+        }
+    }
+}
+
+// Player
+class Player {
+    String name;
+    Color color;
+
+    public Player(String name, Color color) {
+        this.name = name;
+        this.color = color;
+    }
+}
+
+// MoveValidator Service
+class MoveValidator {
+    public boolean isValidMove(Board board, Move move, Color currentPlayerColor) {
+        Square from = board.getSquare(move.fromRow, move.fromCol);
+        if (!from.isOccupied() || from.piece.color != currentPlayerColor) return false;
+
+        return from.piece.canMove(board, move);
+    }
+}
+
+// GameManager: Controls Game Flow
+class GameManager {
+    private Board board;
+    private Player whitePlayer, blackPlayer, currentPlayer;
+    private MoveValidator validator;
+
+    public GameManager(Player white, Player black) {
+        this.whitePlayer = white;
+        this.blackPlayer = black;
+        this.currentPlayer = white;
+        this.validator = new MoveValidator();
+        this.board = new Board();
+        initializeBoard();
+    }
+
+    // Set up only pawns here for simplicity
+    private void initializeBoard() {
+        for (int col = 0; col < 8; col++) {
+            board.placePiece(1, col, PieceFactory.createPiece(PieceType.PAWN, Color.BLACK));
+            board.placePiece(6, col, PieceFactory.createPiece(PieceType.PAWN, Color.WHITE));
+        }
+    }
+
+    public void startGame() {
+        // Example manual moves; replace with UI input in production
+        Move move1 = new Move(6, 0, 5, 0); // white pawn
+        if (validator.isValidMove(board, move1, currentPlayer.color)) {
+            makeMove(move1);
+            switchTurns();
+        }
+    }
+
+    private void makeMove(Move move) {
+        Square from = board.getSquare(move.fromRow, move.fromCol);
+        Square to = board.getSquare(move.toRow, move.toCol);
+        to.piece = from.piece;
+        from.piece = null;
+    }
+
+    private void switchTurns() {
+        currentPlayer = (currentPlayer == whitePlayer) ? blackPlayer : whitePlayer;
+    }
+}
+
+// Driver Code
+public class ChessGame {
+    public static void main(String[] args) {
+        Player white = new Player("Alice", Color.WHITE);
+        Player black = new Player("Bob", Color.BLACK);
+        GameManager game = new GameManager(white, black);
+        game.startGame();
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
