@@ -145,6 +145,52 @@ Single Responsibility: Each class focuses on one job, improving clarity and main
 
 =================================================better Design ===================================================
 
+thought process:
+
+1. Strategy Pattern
+
+For implementing different move rules for each type of chess piece.
+
+MoveStrategy interface
+
+Concrete classes like PawnMoveStrategy, KnightMoveStrategy, etc.
+
+Each Piece has a MoveStrategy instance.
+
+🧩 Problem it solves:
+Imagine if you had written all piece move logic inside one canMove() method using a big if-else like:
+
+if (piece is PAWN) { ... }
+else if (piece is KNIGHT) { ... }
+else if (piece is BISHOP) { ... }
+➡ This violates Open/Closed Principle (OCP):
+You’ll have to modify this logic every time you add or fix a piece behavior.
+
+
+2. Factory Pattern
+
+ - If you had to create all pieces like this manually:
+
+
+board.placePiece(6, 0, new Pawn(Color.WHITE));
+board.placePiece(6, 1, new Pawn(Color.WHITE));
+// ... and so on for all pieces
+➡ You’d end up with copy-paste code that’s hard to maintain, error-prone, and not scalable.
+
+ What Factory Pattern does:
+Centralizes object creation logic.
+
+You just say: “Hey, I want a PAWN of color WHITE” — and the factory gives it to you.
+
+Makes it easy to refactor creation logic later (e.g., add logging, cache, different variants of a piece, etc.)
+
+🛠 Benefit:
+Adheres to Single Responsibility (creation logic lives in one place)
+
+Reduces duplication
+
+Makes the Board class clean and focused on layout only
+
 
 // ChessGame.java
 
