@@ -259,6 +259,8 @@ class PawnMoveStrategy implements MoveStrategy {
 }
 
 // Abstract Piece Class
+//if we have not used abstract class for pieces, we would have duplicated canMove function for each piece type
+//since the specific move logic is already handled via strategy, each and every line of canMove function would be same
 abstract class Piece {
     Color color;
     MoveStrategy moveStrategy;
@@ -331,7 +333,8 @@ class Player {
 class MoveValidator {
     public boolean isValidMove(Board board, Move move, Color currentPlayerColor) {
         Square from = board.getSquare(move.fromRow, move.fromCol);
-        if (!from.isOccupied() || from.piece.color != currentPlayerColor) return false;
+        //below line handles the case where user might submit a request with invalid from square
+        if (!from.isOccupied() || from.piece.color != currentPlayerColor) return false; 
 
         return from.piece.canMove(board, move);
     }
