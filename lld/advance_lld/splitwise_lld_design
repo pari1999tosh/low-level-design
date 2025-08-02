@@ -9,7 +9,9 @@ The system should automatically split the expenses among the participants based 
 Users should be able to view their individual balances with other users and settle up the balances.
 The system should support different split methods, such as equal split, percentage split, and exact amounts.
 Users should be able to view their transaction history and group expenses.
-The system should handle concurrent transactions and ensure data consistency.
+
+
+The system should handle conurrent transactions and ensure data consistency.
 
 */
 
@@ -17,6 +19,7 @@ entities:
  - user
  - groups
  - expense
+ - split
 services 
  - createAccount
  - editProfile
@@ -73,7 +76,7 @@ services
      amount,
      description,
      List<User> participant
-     Split split;
+    
      Expense Expense(payer_user_id,) {
         split(User user,payer_user_id,){
              //create the map and pass to Split();
@@ -154,12 +157,12 @@ class Expense {
     private final List<User> participants;
     private final Split split;
 
-    public Expense(double amount, String description, User payer, List<User> participants, Split split) {
+    public Expense(double amount, String description, User payer, List<User> participants, Split) {
         this.amount = amount;
         this.description = description;
         this.payer = payer;
         this.participants = participants;
-        this.split = split;
+        this.split = new split;
     }
 
     public User getPayer() {
@@ -294,6 +297,8 @@ class BalanceSheetService {
     }
 }
 
+
+
 // --------------------------- USAGE EXAMPLE ---------------------------
 
 class Main {
@@ -308,7 +313,7 @@ class Main {
         trip.addMember(carol);
 
         List<User> participants = Arrays.asList(alice, bob, carol);
-        Expense expense1 = ExpenseFactory.createExpense(3000, "Hotel", alice, participants, new EqualSplitStrategy());
+        Expense expense1 = ExpenseFactory.createExpense(3000, "Hotel", alice, participants,new EqualSplitStrategy());
 
         trip.addExpense(expense1);
         BalanceSheetService.getInstance().addExpense(expense1);
