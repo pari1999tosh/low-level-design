@@ -1,0 +1,319 @@
+laymen design:
+
+requirements:
+/*
+  The system should allow users to create accounts and manage their profile information.
+Users should be able to create groups and add other users to the groups.
+Users should be able to add expenses within a group, specifying the amount, description, and participants.
+The system should automatically split the expenses among the participants based on their share.
+Users should be able to view their individual balances with other users and settle up the balances.
+The system should support different split methods, such as equal split, percentage split, and exact amounts.
+Users should be able to view their transaction history and group expenses.
+The system should handle concurrent transactions and ensure data consistency.
+
+*/
+
+entities:
+ - user
+ - groups
+ - expense
+services 
+ - createAccount
+ - editProfile
+ - createGroup
+ - addUserToGroup
+ - addExpense
+ - splitExpense based on equal,percentage,exact amount
+ - viewOwnBalanceWithOtherUser ->kisko kitna pay karna he
+ - settleBalance
+ - viewTransactionHistory
+ - viewGroupExpense
+ 
+ class User {
+     name;
+     email;
+     List<Groups> grp;
+     createAccount()
+     createGroup(){
+         //to create a group, we will have to create balancesheet also
+     }
+ }
+ 
+ class Account {
+     
+ }
+ 
+ class Group {
+     name;
+     map<user_id,pair<user_id,int>> balance;//dashboard to see who ows what to whom
+     BalanceSheet bsheet;
+     List<members>
+     List<Expense>
+     addMember()
+     addExpense()
+     viewOwnBalanceWithOtherUsers(User user)
+ }
+ 
+ class BalanceSheet {
+     List<Split> splits;
+     
+ }
+ 
+ class Split {
+     Map<user_id,int> share;
+     payer_user_id: payer_user_id,
+     Split(Map<user_id,int>& mp,payer_user_id,) {
+         
+     }
+     
+ }
+ 
+ class Expense {
+     
+     amount,
+     description,
+     List<User> participant
+     Split split;
+     Expense Expense(payer_user_id,) {
+        split(User user,payer_user_id,){
+             //create the map and pass to Split();
+             this.split = new Split();
+         }  
+     }
+     
+ }
+
+
+
+
+ problems:
+ 1. what if new split type comes: no strategy right now.
+ 2. how would you handle concurrency while adding shares, multiple threads will try to update same map
+ 3. split class object creation requires if/else condition. can't we use factory here?
+
+
+ good design:
+
+ import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+// --------------------------- ENTITIES ---------------------------
+
+class User {
+    private final String userId;
+    private String name;
+    private String email;
+
+    public User(String userId, String name, String email) {
+        this.userId = userId;
+        this.name = name;
+        this.email = email;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+
+class Group {
+    private final String groupId;
+    private String name;
+    private final List<User> members = new ArrayList<>();
+    private final List<Expense> expenses = new ArrayList<>();
+
+    public Group(String groupId, String name) {
+        this.groupId = groupId;
+        this.name = name;
+    }
+
+    public void addMember(User user) {
+        members.add(user);
+    }
+
+    public List<User> getMembers() {
+        return members;
+    }
+
+    public void addExpense(Expense expense) {
+        expenses.add(expense);
+    }
+
+    public String getGroupId() {
+        return groupId;
+    }
+}
+
+class Expense {
+    private final double amount;
+    private final String description;
+    private final User payer;
+    private final List<User> participants;
+    private final Split split;
+
+    public Expense(double amount, String description, User payer, List<User> participants, Split split) {
+        this.amount = amount;
+        this.description = description;
+        this.payer = payer;
+        this.participants = participants;
+        this.split = split;
+    }
+
+    public User getPayer() {
+        return payer;
+    }
+
+    public List<User> getParticipants() {
+        return participants;
+    }
+
+    public Split getSplit() {
+        return split;
+    }
+
+    public double getAmount() {
+        return amount;
+    }
+}
+
+class Split {
+    private final Map<User, Double> splitMap;
+
+    public Split(Map<User, Double> splitMap) {
+        this.splitMap = splitMap;
+    }
+
+    public Map<User, Double> getSplitMap() {
+        return splitMap;
+    }
+}
+
+// --------------------------- STRATEGY PATTERN ---------------------------
+
+interface SplitStrategy {
+    Map<User, Double> calculateSplit(double amount, User payer, List<User> participants);
+}
+
+class EqualSplitStrategy implements SplitStrategy {
+    @Override
+    public Map<User, Double> calculateSplit(double amount, User payer, List<User> participants) {
+        Map<User, Double> result = new HashMap<>();
+        double share = amount / participants.size();
+        for (User user : participants) {
+            if (!user.getUserId().equals(payer.getUserId())) {
+                result.put(user, share);
+            }
+        }
+        return result;
+    }
+}
+
+class ExactSplitStrategy implements SplitStrategy {
+    private final Map<User, Double> exactAmounts;
+
+    public ExactSplitStrategy(Map<User, Double> exactAmounts) {
+        this.exactAmounts = exactAmounts;
+    }
+
+    @Override
+    public Map<User, Double> calculateSplit(double amount, User payer, List<User> participants) {
+        return exactAmounts;
+    }
+}
+
+class PercentageSplitStrategy implements SplitStrategy {
+    private final Map<User, Double> percentages;
+
+    public PercentageSplitStrategy(Map<User, Double> percentages) {
+        this.percentages = percentages;
+    }
+
+    @Override
+    public Map<User, Double> calculateSplit(double amount, User payer, List<User> participants) {
+        Map<User, Double> result = new HashMap<>();
+        for (Map.Entry<User, Double> entry : percentages.entrySet()) {
+            result.put(entry.getKey(), amount * entry.getValue() / 100);
+        }
+        return result;
+    }
+}
+
+// --------------------------- FACTORY ---------------------------
+
+class ExpenseFactory {
+    public static Expense createExpense(double amount, String description, User payer, List<User> participants, SplitStrategy strategy) {
+        Map<User, Double> splitMap = strategy.calculateSplit(amount, payer, participants);
+        Split split = new Split(splitMap);
+        return new Expense(amount, description, payer, participants, split);
+    }
+}
+
+// --------------------------- SINGLETON BALANCE SHEET SERVICE ---------------------------
+
+class BalanceSheetService {
+    private static BalanceSheetService instance;
+    private final Map<String, Map<String, Double>> balanceSheet = new ConcurrentHashMap<>();
+
+    private BalanceSheetService() {}
+
+    public static synchronized BalanceSheetService getInstance() {
+        if (instance == null) {
+            instance = new BalanceSheetService();
+        }
+        return instance;
+    }
+
+    public void addExpense(Expense expense) {
+        User payer = expense.getPayer();
+        Map<User, Double> splitMap = expense.getSplit().getSplitMap();
+
+        for (Map.Entry<User, Double> entry : splitMap.entrySet()) {
+            User borrower = entry.getKey();
+            double amount = entry.getValue();
+
+            updateBalance(payer.getUserId(), borrower.getUserId(), amount);
+        }
+    }
+
+    private void updateBalance(String lenderId, String borrowerId, double amount) {
+        balanceSheet.putIfAbsent(lenderId, new ConcurrentHashMap<>());
+        balanceSheet.putIfAbsent(borrowerId, new ConcurrentHashMap<>());
+
+        Map<String, Double> lenderMap = balanceSheet.get(lenderId);
+        Map<String, Double> borrowerMap = balanceSheet.get(borrowerId);
+
+        lenderMap.put(borrowerId, lenderMap.getOrDefault(borrowerId, 0.0) + amount);
+        borrowerMap.put(lenderId, borrowerMap.getOrDefault(lenderId, 0.0) - amount);
+    }
+
+    public double getBalance(String userA, String userB) {
+        return balanceSheet.getOrDefault(userA, new HashMap<>()).getOrDefault(userB, 0.0);
+    }
+}
+
+// --------------------------- USAGE EXAMPLE ---------------------------
+
+class Main {
+    public static void main(String[] args) {
+        User alice = new User("u1", "Alice", "alice@example.com");
+        User bob = new User("u2", "Bob", "bob@example.com");
+        User carol = new User("u3", "Carol", "carol@example.com");
+
+        Group trip = new Group("g1", "Trip to Goa");
+        trip.addMember(alice);
+        trip.addMember(bob);
+        trip.addMember(carol);
+
+        List<User> participants = Arrays.asList(alice, bob, carol);
+        Expense expense1 = ExpenseFactory.createExpense(3000, "Hotel", alice, participants, new EqualSplitStrategy());
+
+        trip.addExpense(expense1);
+        BalanceSheetService.getInstance().addExpense(expense1);
+
+        System.out.println("Bob owes Alice: " + BalanceSheetService.getInstance().getBalance("u1", "u2"));
+        System.out.println("Carol owes Alice: " + BalanceSheetService.getInstance().getBalance("u1", "u3"));
+    }
+}
