@@ -11,6 +11,13 @@ class GameBoard(){
         // set this.pos
         // run for loop and create new Pieces for initial position
         // A1 = new Piece(rook, white)
+        for(char x='A'; x < H; A++){
+            for(int j=0; j < 8; j++){
+              if(pos == "A1") new Hanthi(white,hanthi)
+               continue;
+              else if(pos == "A2") new Ghoda(white, ghoda)
+            }
+        }
     }
     
     move(string initialPosition,string finalPosition,string color){
@@ -44,12 +51,14 @@ class GameBoard(){
     }
 }
 
-class Pieces {
+interface Pieces {
     string type;
     string colour;
     
     
 }
+
+hanthi,ghoda etc claases will implement this interface
 
 class Main {
     
@@ -137,7 +146,10 @@ Single Responsibility: Each class focuses on one job, improving clarity and main
 
 
 
-
+  prerequisit:
+  1. abstract factory/factory
+  2. stragetgy pattern.
+  3.Facade
 
 
 
@@ -199,6 +211,12 @@ enum Color {
     WHITE, BLACK
 }
 
+white = 1, black = 0
+
+if(color == Color.White){
+
+}
+
 enum PieceType {
     KING, QUEEN, ROOK, BISHOP, KNIGHT, PAWN
 }
@@ -214,7 +232,9 @@ class Move {
         this.toRow = toRow;
         this.toCol = toCol;
     }
-}
+
+    
+} 
 
 class Square {
     int row, col;
@@ -341,7 +361,7 @@ class MoveValidator {
 }
 
 // GameManager: Controls Game Flow
-class GameManager {
+class GameManagerFacade {
     private Board board;
     private Player whitePlayer, blackPlayer, currentPlayer;
     private MoveValidator validator;
@@ -363,7 +383,7 @@ class GameManager {
         }
     }
 
-    public void startGame() {
+    public void startGame(Move move) {
         // Example manual moves; replace with UI input in production
         Move move1 = new Move(6, 0, 5, 0); // white pawn
         if (validator.isValidMove(board, move1, currentPlayer.color)) {
@@ -375,6 +395,7 @@ class GameManager {
     private void makeMove(Move move) {
         Square from = board.getSquare(move.fromRow, move.fromCol);
         Square to = board.getSquare(move.toRow, move.toCol);
+
         to.piece = from.piece;
         from.piece = null;
     }
@@ -389,10 +410,28 @@ public class ChessGame {
     public static void main(String[] args) {
         Player white = new Player("Alice", Color.WHITE);
         Player black = new Player("Bob", Color.BLACK);
-        GameManager game = new GameManager(white, black);
+        GameManager game = new GameManagerFacade(white, black);
         game.startGame();
+        
+        game.starGame(Move move)
+        
     }
 }
+
+
+cases handled:
+1.new type of board can be added without mofdigying the existing class code anywhere(open/close).
+2.Facade class doesn't know about object inititation logic for various pieces.(single respnsibility principle)
+3.multiple validator for different type of  chess board type can be added without modifying existig code(Open/closed)
+4.validtor obkect and board object inside facade class will be injected via constrcuot(dependency injection principle).
+5.Since we can replace any parent clas object with child clas object, Liskov substituion principle is alos followed
+6. Interface segregation principle is also followed.
+
+
+ratne ka tareeka:
+dry run:start top/down.
+2.start from driver/main class and walkthrough the code.
+3.at any step, check if any of the 5 SOLID principle is breaking.
 
 
 
