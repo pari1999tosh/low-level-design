@@ -1,1 +1,169 @@
+S - Single Responsibility
+O - Open/ close
+L - Liskov Substitution
+I - Interface Segregation
+D - Dependency Injection
+
+
+Single Responsibility principle: A class should have only one reason to change.
+
+      class User {
+          String name;
+          void saveToDB() { /* save user */ }
+          void sendEmail() { /* send welcome email */ }
+      }
+      
+      class User {
+          String name;
+      }
+      
+      class UserRepository {
+          void save(User user) { /* Save logic */ }
+      }
+      
+      class EmailService {
+          void sendWelcomeEmail(User user) { /* Email logic */ }
+      }
+
+Open/ Close principle: A class should be open for extension but closed for modiciation
+
+        class DiscountCalculator {
+            double calculate(String type, double amount) {
+                if (type.equals("FESTIVAL")) return amount * 0.9;
+                else if (type.equals("NEWUSER")) return amount * 0.8;
+                return amount;
+            }
+        }
+        
+        interface DiscountStrategy {
+            double applyDiscount(double amount);
+        }
+        
+        class FestivalDiscount implements DiscountStrategy {
+            public double applyDiscount(double amount) { return amount * 0.9; }
+        }
+        
+        class NewUserDiscount implements DiscountStrategy {
+            public double applyDiscount(double amount) { return amount * 0.8; }
+        }
+        
+        class DiscountCalculator {
+            public double calculate(DiscountStrategy strategy, double amount) {
+                return strategy.applyDiscount(amount);
+            }
+        }
+
+Liskov's Substitution principle:
+          anywhere in the code, an object for parent class can be replaced by child class without runtime exception.Because
+          when we say the a class is extending a parent class, it means all functionalities of parent must be there in child
+          then a child should always replace parent class object
+          class Bird {
+              void fly() {}
+          }
+          
+          class Ostrich extends Bird {
+              void fly() { throw new UnsupportedOperationException(); }
+          }
+        
+        
+          interface Bird {}
+        
+          interface FlyingBird extends Bird {
+              void fly();
+          }
+          
+          class Sparrow implements FlyingBird {
+              public void fly() { System.out.println("Flying"); }
+          }
+          
+          class Ostrich implements Bird {
+              // No fly method here!
+          }
+
+
+Interface Segregation: class should never implement an interface, if it doesn't need all the functions inside the interfcae
+
+          interface Worker {
+              void work();
+              void eat();
+          }
+      
+          class Human implements Worker {
+              public void work() {}
+              public void eat() {} // Irrelevant for robots
+          }
+          
+          class Robot implements Worker {
+              public void work() {}
+              public void eat() {} // Irrelevant for robots
+          }
+      
+      
+      
+          interface Workable {
+              void work();
+          }
+          
+          interface Eatable {
+              void eat();
+          }
+          
+          class Human implements Workable, Eatable {
+              public void work() {}
+              public void eat() {}
+          }
+          
+          class Robot implements Workable {
+              public void work() {}
+          }
+
+
+
+Dependency Injection Principle: 
+       A higher level module should never depend on low level module. 
+
+         class MySQLOrderRepository {
+              void saveOrder(Order order) { /* save to MySQL */ }
+          }
+          
+          class OrderService {
+              MySQLOrderRepository repository = new MySQLOrderRepository();
+          
+              void placeOrder(Order order) {
+                  // business logic
+                  repository.saveOrder(order);
+              }
+          }
+
+
+         
+          interface OrderRepository {
+              void saveOrder(Order order);
+          }
+          
+          class MySQLOrderRepository implements OrderRepository {
+              public void saveOrder(Order order) { /* save to MySQL */ }
+          }
+          
+          class OrderService {
+              private OrderRepository repository;
+          
+              // Dependency Injection via constructor
+              OrderService(OrderRepository repository) {
+                  this.repository = repository;
+              }
+          
+              void placeOrder(Order order) {
+                  repository.saveOrder(order);
+              }
+          }
+
+
+
+
+
+
+
+
+
 
