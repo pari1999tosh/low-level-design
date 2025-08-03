@@ -1,1 +1,67 @@
+suppsoe there are multiple classes implementing a common interface like :
+
+interface Notification {
+   void send(String message);
+}
+
+class SMSNotification implements Notification {
+  @override
+  void send(String message){
+     some logic
+  }
+}
+
+class EmailNotification implements Notification {
+  @override
+  void send(String message){
+     some logic
+  }
+}
+
+class PushNotification implements Notification {
+  @override
+  void send(String message){
+     some logic
+  }
+}
+
+
+class someOtherClass {
+  string type;
+  Notification notif;
+  void sendNotification(String message){
+    if(type == "sms"){
+       storeS3("store in s3")
+       notif = new SMSNotification(message) 
+    }else if(type == "email"){
+      storeDynamo()
+      notif = new EmailNotification(message)
+    }else if(type == "push"){
+      storeVector()
+      notif = new PushNotification(message)
+    }
+
+    return  Notificationfactory.createNotification(message, type)
+
+  }
+}
+
+
+//Factory class
+
+class NotificationFactory implement notification {
+
+      static void createNotification(message,type){
+            if(type == "sms"){
+               storeS3("store in s3")
+               return new SMSNotification(message) 
+            }else if(type == "email"){
+              storeDynamo()
+              return new EmailNotification(message)
+            }else if(type == "push"){
+              storeVector()
+              return new PushNotification(message)
+            }
+      }
+}
 
