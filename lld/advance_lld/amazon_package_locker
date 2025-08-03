@@ -58,9 +58,12 @@ Design Pattern we can use:
   Facade Pattern	AccessService hides the complexity of unlocking (OTP + locker checks): user should not concern about how unlocking is happening and otp is generating, he would imply enter the otp and boom.
 
 
-class wise code:
-
+// Enums
 public enum LockerSize {
+    SMALL, MEDIUM, LARGE;
+}
+
+public enum PackageSize {
     SMALL, MEDIUM, LARGE;
 }
 
@@ -68,72 +71,41 @@ public enum DeliveryType {
     DELIVERY, RETURN;
 }
 
- Locker class:
-  public class Locker {
-    private String lockerId;
-    private LockerSize size;
-    private boolean isOccupied;
-    private Package storedPackage;
-    private LocalDateTime lastAccessTime;
+public enum OtpType {
+    DELIVERY, RETURN;
+}
 
-    public Locker(String lockerId, LockerSize size) {
-        this.lockerId = lockerId;
-        this.size = size;
-        this.isOccupied = false;
+// Entity: User
+public class User {
+    private String userId;
+    private String name;
+    private String phoneNumber;
+
+    public User(String userId, String name, String phoneNumber) {
+        this.userId = userId;
+        this.name = name;
+        this.phoneNumber = phoneNumber;
     }
 
-    public String getLockerId() {
-        return lockerId;
+    public String getUserId() {
+        return userId;
     }
 
-    public LockerSize getSize() {
-        return size;
+    public String getName() {
+        return name;
     }
 
-    public boolean isOccupied() {
-        return isOccupied;
-    }
-
-    public Package getStoredPackage() {
-        return storedPackage;
-    }
-
-    public LocalDateTime getLastAccessTime() {
-        return lastAccessTime;
-    }
-
-    public void storePackage(Package pkg) {
-        this.storedPackage = pkg;
-        this.isOccupied = true;
-        this.lastAccessTime = LocalDateTime.now();
-    }
-
-    public void vacate() {
-        this.storedPackage = null;
-        this.isOccupied = false;
-        this.lastAccessTime = LocalDateTime.now();
+    public String getPhoneNumber() {
+        return phoneNumber;
     }
 }
 
-argue: you might be thinking that vacating the lokcer and storing the package is having common implementaiton logic, so why
-       we didn't create a singleton class and put these functions there.
-reason: Singleton is used when you have a class that has shared state and some function that uses this shared state to do some task
-        ex: use the configs like conn pool size and timeout and create database connction, since the shared state will be used
-           you don't want to create multiple objects because each object might store different values in shared state.
-        but here, locker doesn't have shared state: whether or not a locker is occupied and it's size are two states,
-        but they will be different for different lockers, if it were the cases that every lokcer will have same size
-        and if one locker opens, all lockers should open, we could have gone for singelton.
-
-//locker class
-public enum PackageSize {
-    SMALL, MEDIUM, LARGE;
-}
-
+// Entity: Package
 public class Package {
-    private String packageId;       // Unique ID for the package
-    private String userId;          // Who this package belongs to
-    private PackageSize size;       // Size of the package (used for allocation strategy in future)
-    private DeliveryType deliveryType; // DELIVERY or RETURN
+    private String packageId;
+    private String userId;
+    private PackageSize size;
+    private DeliveryType deliveryType;
     private LocalDateTime createdAt;
 
     public Package(String packageId, String userId, PackageSize size, DeliveryType deliveryType) {
@@ -165,49 +137,249 @@ public class Package {
     }
 }
 
-tip: PackageSize is a enum because by mistake in system if someone tries to put a package of different size, system will detect it
+// Entity: Locker
+public class Locker {
+    private String lockerId;
+    private LockerSize size;
+    private boolean isOccupied;
+    private Package storedPackage;
+    private LocalDateTime lastAccessTime;
 
+    public Locker(String lockerId, LockerSize size) {
+        this.lockerId = lockerId;
+        this.size = size;
+        this.isOccupied = false;
+    }
 
-3.
-public enum OtpType {
-    DELIVERY, RETURN;
+    public String getLockerId() {
+        return lockerId;
+    }
+
+    public LockerSize getSize() {
+        return size;
+    }
+
+    public boolean isOccupied() {
+        return isOccupied;
+    }
+
+    public Package getStoredPackage() {
+        return storedPackage;
+    }
+
+    public LocalDateTime getOccupiedAt() {
+        return lastAccessTime;
+    }
+
+    public void storePackage(Package pkg) {
+        this.storedPackage = pkg;
+        this.isOccupied = true;
+        this.lastAccessTime = LocalDateTime.now();
+    }
+
+    public void vacate() {
+        this.storedPackage = null;
+        this.isOccupied = false;
+        this.lastAccessTime = LocalDateTime.now();
+    }
 }
 
+// Entity: Otp
 public class Otp {
-    private String code;                // The actual OTP string
-    private String associatedPackageId; // Tied to a specific package
-    private LocalDateTime generatedAt;  // Timestamp for expiry checks
-    private OtpType type;               // DELIVERY or RETURN
+    private final String value;
 
-    public Otp(String code, String associatedPackageId, OtpType type) {
-        this.code = code;
-        this.associatedPackageId = associatedPackageId;
-        this.type = type;
-        this.generatedAt = LocalDateTime.now();
+    public Otp(String value) {
+        this.value = value;
     }
 
-    public String getCode() {
-        return code;
+    public String getValue() {
+        return value;
     }
 
-    public String getAssociatedPackageId() {
-        return associatedPackageId;
-    }
-
-    public LocalDateTime getGeneratedAt() {
-        otp generation can't be singleton service because in background you must be doing some work
-        because each otp generation is related to a customer
-        return generatedAt;
-    }
-
-    public OtpType getType() {
-        return type;
-    }
-
-    public boolean isExpired() {
-        return Duration.between(generatedAt, LocalDateTime.now()).toMinutes() > 30; // assuming 30-minute expiry
+    @Override
+    public String toString() {
+        return "Otp{" + "value='" + value + '\'' + '}';
     }
 }
+
+// OtpService Singleton
+public class OtpService {
+    private static OtpService instance = null;
+    private Map<String, String> otpMap = new HashMap<>();
+    private Random random = new Random();
+
+    private OtpService() {}
+
+    public static OtpService getInstance() {
+        if (instance == null) {
+            instance = new OtpService();
+        }
+        return instance;
+    }
+
+    public String generateOtp(String lockerId) {
+        String otp = String.format("%06d", random.nextInt(1000000));
+        otpMap.put(lockerId, otp);
+        return otp;
+    }
+
+    public boolean validateOtp(String lockerId, String enteredOtp) {
+        String expectedOtp = otpMap.get(lockerId);
+        if (expectedOtp != null && expectedOtp.equals(enteredOtp)) {
+            otpMap.remove(lockerId);
+            return true;
+        }
+        return false;
+    }
+}
+
+// Strategy Interface
+public interface LockerAllocationStrategy {
+    Locker allocate(List<Locker> lockers, Package pkg);
+}
+
+// Random Strategy
+public class RandomLockerAllocationStrategy implements LockerAllocationStrategy {
+    public Locker allocate(List<Locker> lockers, Package pkg) {
+        for (Locker locker : lockers) {
+            if (!locker.isOccupied()) {
+                locker.storePackage(pkg);
+                return locker;
+            }
+        }
+        return null;
+    }
+}
+
+// Size-Based Strategy
+public class SizeBasedLockerAllocationStrategy implements LockerAllocationStrategy {
+    public Locker allocate(List<Locker> lockers, Package pkg) {
+        for (Locker locker : lockers) {
+            if (!locker.isOccupied() && locker.getSize().name().equals(pkg.getSize().name())) {
+                locker.storePackage(pkg);
+                return locker;
+            }
+        }
+        return null;
+    }
+}
+
+// LockerService Singleton
+public class LockerService {
+    private static LockerService instance = null;
+    private List<Locker> lockers = new ArrayList<>();
+    private LockerAllocationStrategy allocationStrategy;
+
+    private LockerService() {}
+
+    public static LockerService getInstance() {
+        if (instance == null) {
+            instance = new LockerService();
+        }
+        return instance;
+    }
+
+    public void setAllocationStrategy(LockerAllocationStrategy strategy) {
+        this.allocationStrategy = strategy;
+    }
+
+    public void addLocker(Locker locker) {
+        lockers.add(locker);
+    }
+
+    public Locker allocateLocker(Package pkg) {
+        if (allocationStrategy == null) {
+            throw new IllegalStateException("No allocation strategy configured");
+        }
+        return allocationStrategy.allocate(lockers, pkg);
+    }
+
+    public List<Locker> getLockers() {
+        return lockers;
+    }
+}
+
+// AdminService Singleton
+public class AdminService {
+    private static AdminService instance = null;
+    private List<Locker> lockers;
+
+    private AdminService(List<Locker> lockers) {
+        this.lockers = lockers;
+    }
+
+    public static AdminService getInstance(List<Locker> lockers) {
+        if (instance == null) {
+            instance = new AdminService(lockers);
+        }
+        return instance;
+    }
+
+    public List<Locker> getStaleOccupiedLockers() {
+        List<Locker> staleLockers = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        for (Locker locker : lockers) {
+            if (locker.isOccupied()) {
+                Duration duration = Duration.between(locker.getOccupiedAt(), now);
+                if (duration.toDays() > 3) {
+                    staleLockers.add(locker);
+                }
+            }
+        }
+        return staleLockers;
+    }
+
+    public void forceVacateStaleLockers() {
+        List<Locker> staleLockers = getStaleOccupiedLockers();
+        for (Locker locker : staleLockers) {
+            locker.vacate();
+            System.out.println("Admin forcibly vacated locker: " + locker.getLockerId());
+        }
+    }
+}
+
+// Driver Code
+public class Main {
+    public static void main(String[] args) {
+        // Create lockers
+        Locker locker1 = new Locker("L1", LockerSize.SMALL);
+        Locker locker2 = new Locker("L2", LockerSize.MEDIUM);
+
+        // Initialize LockerService and set strategy
+        LockerService lockerService = LockerService.getInstance();
+        lockerService.addLocker(locker1);
+        lockerService.addLocker(locker2);
+        lockerService.setAllocationStrategy(new RandomLockerAllocationStrategy());
+
+        // Create a package
+        Package pkg = new Package("P1", "U1", PackageSize.SMALL, DeliveryType.DELIVERY);
+
+        // Allocate locker
+        Locker allocated = lockerService.allocateLocker(pkg);
+        if (allocated != null) {
+            System.out.println("Package stored in locker: " + allocated.getLockerId());
+        } else {
+            System.out.println("No locker available");
+        }
+
+        // Generate and validate OTP
+        OtpService otpService = OtpService.getInstance();
+        String otp = otpService.generateOtp(allocated.getLockerId());
+        System.out.println("Generated OTP: " + otp);
+
+        boolean isValid = otpService.validateOtp(allocated.getLockerId(), otp);
+        System.out.println("OTP Valid: " + isValid);
+
+        // Admin service demo
+        AdminService adminService = AdminService.getInstance(lockerService.getLockers());
+        adminService.forceVacateStaleLockers();
+    }
+}
+
+
+
+
+
 
 
 
