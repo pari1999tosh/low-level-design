@@ -1,0 +1,229 @@
+Design a Locker management system for an ecommerce store. While performing a purchase, the users can opt for their packages to get delivered at a Locker system close to their place. The delivery person will place the package in a locker. An otp will be generated and sent to the user once the package is added to the locker.
+
+As per the user’s convenience, they can visit the locker, enter the otp and get their parcel. Further, if the users want to return the goods, they can visit the locker and place the item. Delivery guy will get an otp which can be used to unlock the locker.
+
+Following are the expectations from the system:
+Person asks the system to allocate a locker for a given package. Assume random allocation for now. The system should be extensible and accommodate allocation of locker based on the size of the input package
+The system must generate a code/otp and send it to the user along with the locker details
+The user can enter the otp & locker details to unlock the locker
+Once the package is taken out, the locker can be allocated for any other order
+Users can use the locker for returning an item. OTP/code will be sent to the delivery person in this case
+Operations/Admin can view & vacate all lockers which are in use for more than 3 days
+
+
+
+
+
+
+enitty classes:
+  - Locker
+  - Package
+  - User
+  - Otp
+
+services required:
+
+golden rule: while designing each service, you have to argue wehther you need singleton for that or not.
+             sometimes logic can be placed inside a class and we can make this class singelton, but it can
+             be over engineering. ex: in database connection, you know every API request creates connection with database
+             so everytime API request will create new objects , hence we make it singleton.
+             
+
+  LockerService
+      Locker allocateLocker(Package pkg)
+      void vacateLocker(String lockerId)
+      List<Locker> getOverdueLockers(Duration timeLimit)
+
+  OtpService
+      String generateOtp(String lockerId, DeliveryType type)
+      boolean validateOtp(String lockerId, String otp, DeliveryType type)
+
+  NotificationService
+    void sendOtp(String phoneNumber, String otp, Locker lockerDetails)
+
+  AccessService
+    boolean unlockLocker(String lockerId, String otp, DeliveryType type)
+
+  AdminService
+    List<Locker> getOverdueLockers()
+    void forceVacate(String lockerId)
+
+
+
+Design Pattern we can use:
+  Strategy Pattern	: locker allocation strategies (e.g., random, size-based,location based:though in this question location is not a requirement so skip it)
+  Factory Pattern	To generate the right strategy (e.g., based on rules or configs:some criteria will be there to decide if we want to do size based allocation, AC/Non-AC based on prime member)
+  Singleton Pattern	For services like LockerService, OtpService, etc.(creating otp is a shared state , so everyone would use this service without creating multiple objects)
+  Observer Pattern (Conceptual)	Notify user/delivery agent when OTP is generated(user and delivery partner and admin are three different entities which needs to be notified when package is dropped)
+  Facade Pattern	AccessService hides the complexity of unlocking (OTP + locker checks): user should not concern about how unlocking is happening and otp is generating, he would imply enter the otp and boom.
+
+
+class wise code:
+
+public enum LockerSize {
+    SMALL, MEDIUM, LARGE;
+}
+
+public enum DeliveryType {
+    DELIVERY, RETURN;
+}
+
+ Locker class:
+  public class Locker {
+    private String lockerId;
+    private LockerSize size;
+    private boolean isOccupied;
+    private Package storedPackage;
+    private LocalDateTime lastAccessTime;
+
+    public Locker(String lockerId, LockerSize size) {
+        this.lockerId = lockerId;
+        this.size = size;
+        this.isOccupied = false;
+    }
+
+    public String getLockerId() {
+        return lockerId;
+    }
+
+    public LockerSize getSize() {
+        return size;
+    }
+
+    public boolean isOccupied() {
+        return isOccupied;
+    }
+
+    public Package getStoredPackage() {
+        return storedPackage;
+    }
+
+    public LocalDateTime getLastAccessTime() {
+        return lastAccessTime;
+    }
+
+    public void storePackage(Package pkg) {
+        this.storedPackage = pkg;
+        this.isOccupied = true;
+        this.lastAccessTime = LocalDateTime.now();
+    }
+
+    public void vacate() {
+        this.storedPackage = null;
+        this.isOccupied = false;
+        this.lastAccessTime = LocalDateTime.now();
+    }
+}
+
+argue: you might be thinking that vacating the lokcer and storing the package is having common implementaiton logic, so why
+       we didn't create a singleton class and put these functions there.
+reason: Singleton is used when you have a class that has shared state and some function that uses this shared state to do some task
+        ex: use the configs like conn pool size and timeout and create database connction, since the shared state will be used
+           you don't want to create multiple objects because each object might store different values in shared state.
+        but here, locker doesn't have shared state: whether or not a locker is occupied and it's size are two states,
+        but they will be different for different lockers, if it were the cases that every lokcer will have same size
+        and if one locker opens, all lockers should open, we could have gone for singelton.
+
+//locker class
+public enum PackageSize {
+    SMALL, MEDIUM, LARGE;
+}
+
+public class Package {
+    private String packageId;       // Unique ID for the package
+    private String userId;          // Who this package belongs to
+    private PackageSize size;       // Size of the package (used for allocation strategy in future)
+    private DeliveryType deliveryType; // DELIVERY or RETURN
+    private LocalDateTime createdAt;
+
+    public Package(String packageId, String userId, PackageSize size, DeliveryType deliveryType) {
+        this.packageId = packageId;
+        this.userId = userId;
+        this.size = size;
+        this.deliveryType = deliveryType;
+        this.createdAt = LocalDateTime.now();
+    }
+
+    public String getPackageId() {
+        return packageId;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public PackageSize getSize() {
+        return size;
+    }
+
+    public DeliveryType getDeliveryType() {
+        return deliveryType;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+}
+
+tip: PackageSize is a enum because by mistake in system if someone tries to put a package of different size, system will detect it
+
+
+3.
+public enum OtpType {
+    DELIVERY, RETURN;
+}
+
+public class Otp {
+    private String code;                // The actual OTP string
+    private String associatedPackageId; // Tied to a specific package
+    private LocalDateTime generatedAt;  // Timestamp for expiry checks
+    private OtpType type;               // DELIVERY or RETURN
+
+    public Otp(String code, String associatedPackageId, OtpType type) {
+        this.code = code;
+        this.associatedPackageId = associatedPackageId;
+        this.type = type;
+        this.generatedAt = LocalDateTime.now();
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public String getAssociatedPackageId() {
+        return associatedPackageId;
+    }
+
+    public LocalDateTime getGeneratedAt() {
+        otp generation can't be singleton service because in background you must be doing some work
+        because each otp generation is related to a customer
+        return generatedAt;
+    }
+
+    public OtpType getType() {
+        return type;
+    }
+
+    public boolean isExpired() {
+        return Duration.between(generatedAt, LocalDateTime.now()).toMinutes() > 30; // assuming 30-minute expiry
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
