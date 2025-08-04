@@ -1,0 +1,25 @@
+1. List all entity classes you can think off, they are just nouns of english(something that has a identity).
+2. List all functions you need other that getters and setters of entity classes.
+   usually these functions can be identified from requirement texts, like "system should be able to...".
+3. for each of these functions, see if they will operate on shared state, if yes then put them inside a class and make it singleton.
+4. In entire system requirement, check if you have to do a task somewhere, which can happen in many ways. use strategies for
+   such tasks. ex: sending different type of notifications.
+5. In entire system, check if anywhere you will create objects of relatable classes (classes that implement same interface)
+   based on some if/else condition, the class where you use this if/else logic is not supposed to be exposed to the logic 
+   of object creation. so create a factory class and put this logic inside the factory class.
+6. Strategy, factory and singleton pattern is used in almost all interview questions.
+7. command and state pattern questions are straight forward and can be understood from problem statememt itself:
+   Command Pattern: undo, rollback functionality.
+   State   Pattern: when a varibale changes it's states.
+
+8.  Builder pattern: when you have a class that has lot of data members and there is a need to create multiple constructors of
+   that class out of different combinatorial possiblities of different data members.
+
+9.  memento pattern  : direct questions, somewhere snapshot word will be written. usually in game design, EC2 design etc.
+10. Facade pattern   : when the client code is doing too many things, put all of them into a seperate class and call it facade.
+11. Observer pattern : when a class is suppose to do some action, and whenever that action is performed, you need to inform 
+                       some group of classes.(Notification sending)
+12. Decorator pattern: when you want to add some feature/functionality to an object at run time, maybe based on user input.
+  
+  
+  
