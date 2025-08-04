@@ -1,0 +1,287 @@
+
+List of entity classes:
+
+Vehicle	       Interface for all vehicle types
+Car	           Concrete implementation of Vehicle
+Truck	         Concrete implementation of Vehicle
+Motorcycle	   Concrete implementation of Vehicle
+ParkingSpot	   Represents a spot which can hold one vehicle of a specific type
+Level	         Represents a single floor with multiple ParkingSpots
+
+Service class:
+
+
+ParkingLot	    Central controller managing assignment/release of spots (Singleton)
+VehicleFactory	Responsible for creating different Vehicle objects (Factory Pattern)
+
+
+
+Singleton	ParkingLot	            Ensures only one instance of the parking lot exists globally. Prevents conflicting data in concurrent system.
+Factory	VehicleFactory	          Abstracts creation of Vehicle objects. Adds flexibility when adding new vehicle types.
+Strategy	                        ParkingSpotAssignmentStrategy + FirstAvailableSpotStrategy	Allows dynamic plug-in of different parking spot allocation logic without modifying the ParkingLot.
+Open/Closed Principle	            Vehicle interface + concrete classes	You can add new vehicle types without modifying existing logic in the system.
+Interface Segregation / Liskov    Substitution	Vehicle interface	All vehicles support the same operations, making them substitutable and consistent across the code.
+
+
+
+
+
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+// ========================== VEHICLE INTERFACE ===============================
+
+interface Vehicle {
+    String getLicensePlate();
+    boolean canFitIn(ParkingSpot spot);
+}
+
+// ========================== CONCRETE VEHICLE CLASSES ========================
+
+class Car implements Vehicle {
+    private final String licensePlate;
+
+    public Car(String plate) {
+        this.licensePlate = plate;
+    }
+
+    public String getLicensePlate() {
+        return licensePlate;
+    }
+
+    public boolean canFitIn(ParkingSpot spot) {
+        return spot.getAllowedVehicleClass().equals(Car.class);
+    }
+}
+
+class Truck implements Vehicle {
+    private final String licensePlate;
+
+    public Truck(String plate) {
+        this.licensePlate = plate;
+    }
+
+    public String getLicensePlate() {
+        return licensePlate;
+    }
+
+    public boolean canFitIn(ParkingSpot spot) {
+        return spot.getAllowedVehicleClass().equals(Truck.class);
+    }
+}
+
+class Motorcycle implements Vehicle {
+    private final String licensePlate;
+
+    public Motorcycle(String plate) {
+        this.licensePlate = plate;
+    }
+
+    public String getLicensePlate() {
+        return licensePlate;
+    }
+
+    public boolean canFitIn(ParkingSpot spot) {
+        return spot.getAllowedVehicleClass().equals(Motorcycle.class);
+    }
+}
+
+// ========================== VEHICLE FACTORY ===============================
+
+class VehicleFactory {
+    public static Vehicle createVehicle(String licensePlate, String type) {
+        switch (type.toUpperCase()) {
+            case "CAR": return new Car(licensePlate);
+            case "TRUCK": return new Truck(licensePlate);
+            case "MOTORCYCLE": return new Motorcycle(licensePlate);
+            default: throw new IllegalArgumentException("Unknown vehicle type");
+        }
+    }
+}
+
+// ========================== PARKING SPOT ===============================
+
+class ParkingSpot {
+    private final String id;
+    private final Class<? extends Vehicle> allowedVehicleClass;
+    private boolean occupied = false;
+    private Vehicle vehicle;
+
+    public ParkingSpot(String id, Class<? extends Vehicle> allowedVehicleClass) {
+        this.id = id;
+        this.allowedVehicleClass = allowedVehicleClass;
+    }
+
+    public boolean canFit(Vehicle v) {
+        return !occupied && v.canFitIn(this);
+    }
+
+    public void assignVehicle(Vehicle v) {
+        this.vehicle = v;
+        this.occupied = true;
+    }
+
+    public void removeVehicle() {
+        this.vehicle = null;
+        this.occupied = false;
+    }
+
+    public boolean isOccupied() {
+        return occupied;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public Class<? extends Vehicle> getAllowedVehicleClass() {
+        return allowedVehicleClass;
+    }
+
+    public Vehicle getVehicle() {
+        return vehicle;
+    }
+}
+
+// ========================== LEVEL ===============================
+
+class Level {
+    private final int levelNumber;
+    private final List<ParkingSpot> spots;
+
+    public Level(int levelNumber, List<ParkingSpot> spots) {
+        this.levelNumber = levelNumber;
+        this.spots = spots;
+    }
+
+    public List<ParkingSpot> getSpots() {
+        return spots;
+    }
+
+    public int getLevelNumber() {
+        return levelNumber;
+    }
+
+    public Map<String, Long> getAvailability() {
+        return spots.stream()
+                .filter(s -> !s.isOccupied())
+                .collect(Collectors.groupingBy(
+                        s -> s.getAllowedVehicleClass().getSimpleName(),
+                        Collectors.counting()));
+    }
+}
+
+// ========================== STRATEGY ===============================
+
+interface ParkingSpotAssignmentStrategy {
+    ParkingSpot assignSpot(List<Level> levels, Vehicle vehicle);
+}
+
+class FirstAvailableSpotStrategy implements ParkingSpotAssignmentStrategy {
+    public ParkingSpot assignSpot(List<Level> levels, Vehicle vehicle) {
+        for (Level level : levels) {
+            for (ParkingSpot spot : level.getSpots()) {
+                if (spot.canFit(vehicle)) {
+                    return spot;
+                }
+            }
+        }
+        return null;
+    }
+}
+
+// ========================== SINGLETON: PARKING LOT ===============================
+
+class ParkingLot {
+    private static ParkingLot instance;
+
+    private final List<Level> levels;
+    private final ParkingSpotAssignmentStrategy spotAssignmentStrategy;
+
+    private final Map<String, ParkingSpot> vehicleToSpotMap = new HashMap<>();
+
+    private ParkingLot(List<Level> levels, ParkingSpotAssignmentStrategy strategy) {
+        this.levels = levels;
+        this.spotAssignmentStrategy = strategy;
+    }
+
+    public static synchronized ParkingLot getInstance(List<Level> levels, ParkingSpotAssignmentStrategy strategy) {
+        if (instance == null) {
+            instance = new ParkingLot(levels, strategy);
+        }
+        return instance;
+    }
+
+    public synchronized boolean assignSpot(Vehicle vehicle) {
+        if (vehicleToSpotMap.containsKey(vehicle.getLicensePlate())) {
+            return false; // Vehicle already parked
+        }
+
+        ParkingSpot spot = spotAssignmentStrategy.assignSpot(levels, vehicle);
+        if (spot == null) return false;
+
+        spot.assignVehicle(vehicle);
+        vehicleToSpotMap.put(vehicle.getLicensePlate(), spot);
+        return true;
+    }
+
+    public synchronized boolean releaseSpot(String licensePlate) {
+        ParkingSpot spot = vehicleToSpotMap.get(licensePlate);
+        if (spot == null) return false;
+
+        spot.removeVehicle();
+        vehicleToSpotMap.remove(licensePlate);
+        return true;
+    }
+
+    public Map<Integer, Map<String, Long>> getAvailabilityByLevel() {
+        Map<Integer, Map<String, Long>> map = new HashMap<>();
+        for (Level level : levels) {
+            map.put(level.getLevelNumber(), level.getAvailability());
+        }
+        return map;
+    }
+}
+
+// ========================== DRIVER CLASS ===============================
+
+public class Main {
+    public static void main(String[] args) {
+        List<ParkingSpot> level1Spots = Arrays.asList(
+                new ParkingSpot("L1-C1", Car.class),
+                new ParkingSpot("L1-M1", Motorcycle.class),
+                new ParkingSpot("L1-T1", Truck.class)
+        );
+
+        List<ParkingSpot> level2Spots = Arrays.asList(
+                new ParkingSpot("L2-C1", Car.class),
+                new ParkingSpot("L2-C2", Car.class),
+                new ParkingSpot("L2-M1", Motorcycle.class)
+        );
+
+        Level level1 = new Level(1, level1Spots);
+        Level level2 = new Level(2, level2Spots);
+
+        ParkingLot lot = ParkingLot.getInstance(
+                Arrays.asList(level1, level2),
+                new FirstAvailableSpotStrategy()
+        );
+
+        Vehicle car1 = VehicleFactory.createVehicle("MH12AA0001", "CAR");
+        boolean assigned1 = lot.assignSpot(car1);
+        System.out.println(assigned1 ? "Vehicle parked." : "No available spot");
+
+        Vehicle truck1 = VehicleFactory.createVehicle("MH12BB9999", "TRUCK");
+        boolean assigned2 = lot.assignSpot(truck1);
+        System.out.println(assigned2 ? "Truck parked." : "No available spot");
+
+        boolean released = lot.releaseSpot("MH12AA0001");
+        System.out.println(released ? "Vehicle exited. Spot released." : "Invalid release");
+
+        Map<Integer, Map<String, Long>> availability = lot.getAvailabilityByLevel();
+        for (Map.Entry<Integer, Map<String, Long>> entry : availability.entrySet()) {
+            System.out.println("Level " + entry.getKey() + " availability: " + entry.getValue());
+        }
+    }
+}
