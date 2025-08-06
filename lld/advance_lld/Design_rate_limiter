@@ -1,0 +1,317 @@
+problem statement:
+    Design a flexible and extensible Rate Limiter system where users are assigned rate-limiting configurations 
+    based on their tier, each supporting different algorithms, and allowing runtime changes in algorithm strategy 
+    and configuration by admins.
+
+System Requirements & Behavior
+    Users belong to one of the predefined tiers (e.g., Free, Premium, Enterprise).
+    Each tier has its own RateLimiter instance, configured with:
+    maxRequests
+    timeWindow
+    Optional flags like isLogEnabled, alertThreshold, etc.
+
+Multiple rate-limiting algorithms are supported, such as:
+    Fixed Window
+    Sliding Window
+    Token Bucket
+    Leaky Bucket
+
+Each RateLimiter instance uses a pluggable algorithm strategy, chosen at creation based on admin configuration.
+Admin can update the algorithm dynamically at runtime for a tier — the new strategy should replace the old one without system restart.
+RateLimiter instance for a tier should be reused, not recreated on every request (to ensure state consistency).
+Request Handling Behavior:
+When a user makes a request:
+    The system identifies their tier.
+    It routes the request to the corresponding RateLimiter instance.
+    The configured strategy determines whether to allow or block the request.
+
+Optional Behaviors:
+    If isLogEnabled, the system logs requests or breaches.
+    If alertThreshold is configured, send alert/notification when usage nears the limit.
+    System must be extensible, allowing new algorithms, tiers, and configuration parameters to be added with minimal code changes.
+
+
+
+==========================================================================================================================================================================
+==========================================================================================================================================================================
+==========================================================================================================================================================================
+
+
+Thought Process and list of patterns we need:
+
+
+Builder  :	To construct complex RateLimiterConfig objects with optional parameters like isLogEnabled, alertThreshold, etc.	
+            When admin defines or updates rate limit settings for a tier.
+Factory  :  To create and manage RateLimiter instances per tier. 
+            Ensures correct config & strategy assignment.	When system initializes or when a user from a specific tier makes a request.
+Strategy :	To plug in different rate-limiting algorithms (e.g., Token Bucket, Sliding Window) dynamically.
+            When admin assigns a strategy to a tier OR dynamically updates it at runtime.
+Decorator:	To wrap RateLimiter with optional behaviors like logging or alerting based on config flags.	
+            At RateLimiter creation time if optional features are enabled in config.
+Singleton	 Avoided — Factory caches instances internally, so traditional Singleton is not required and would hurt flexibility.
+
+
+steps of design flow:
+1. Admin Bootstraps System
+    Admin (or config service) defines 3 base tiers:
+    Free, Premium, Enterprise
+    For each tier, a RateLimiterConfig is built as below:
+    RateLimiterConfig config = new RateLimiterConfig.Builder()
+    .setMaxRequests(100)
+    .setTimeWindow(60)
+    .setIsLogEnabled(true)
+    .build();
+
+2. Admin Chooses Algorithm for Each Tier
+    Each tier is assigned an algorithm dynamically:
+    RateLimitingStrategy strategy = new TokenBucketStrategy(...);
+
+3. Factory Creates or Returns Tier-Specific RateLimiter
+      Admin (or backend system) registers tier configuration:
+      RateLimiterFactory.register("Free", config, strategy);
+
+      Factory checks if a RateLimiter already exists for this tier.
+          If yes: returns existing one.
+          If no: creates new instance using the config and strategy.
+     Factory Pattern for controlled instantiation
+     Decorator Pattern is optionally applied if config says so:
+     if (config.isLogEnabled()) {
+          rateLimiter = new LoggingRateLimiterDecorator(rateLimiter);
+      }
+
+4. System Starts Receiving API Requests
+    When a request comes from a user:
+    String tier = UserService.getUserTier(userId);
+    RateLimiter limiter = RateLimiterFactory.getLimiter(tier);
+    boolean allowed = limiter.handleRequest(userId);
+    This hits the decorated RateLimiter:
+        Logs if enabled
+        Delegates to appropriate strategy (allowRequest())
+    Strategy executes the algorithm
+    Decorator logs/alerts if configured
+
+5. Admin Can Change Algorithm at Runtime
+  System supports runtime algorithm switching:
+  RateLimiterFactory.updateStrategy("Enterprise", new SlidingWindowStrategy(...));
+
+
+
+========================================================= code starts =========================================================
+===========================================================================================================================================================================
+===========================================================================================================================================================================
+===========================================================================================================================================================================
+===========================================================================================================================================================================
+===========================================================================================================================================================================
+
+
+
+interface RateLimitingStrategy {
+    boolean allowRequest(String userId);
+}
+
+// Token Bucket Strategy (Strategy Pattern)
+class TokenBucketStrategy implements RateLimitingStrategy {
+    private int tokens;
+    private int capacity;
+    private long lastRefillTimestamp;
+    private final int refillRatePerSecond;
+
+    public TokenBucketStrategy(int capacity, int refillRatePerSecond) {
+        this.capacity = capacity;
+        this.tokens = capacity;
+        this.refillRatePerSecond = refillRatePerSecond;
+        this.lastRefillTimestamp = System.currentTimeMillis();
+    }
+
+    @Override
+    public boolean allowRequest(String userId) {
+        refill();
+        if (tokens > 0) {
+            tokens--;
+            return true;
+        }
+        return false;
+    }
+
+    private void refill() {
+        long now = System.currentTimeMillis();
+        long elapsed = (now - lastRefillTimestamp) / 1000;
+        int refill = (int) (elapsed * refillRatePerSecond);
+        if (refill > 0) {
+            tokens = Math.min(capacity, tokens + refill);
+            lastRefillTimestamp = now;
+        }
+    }
+}
+
+// ------------------------------
+// BUILDER PATTERN
+// ------------------------------
+class RateLimiterConfig {
+    private final int maxRequests;
+    private final int timeWindowInSeconds;
+    private final boolean isLogEnabled;
+
+    private RateLimiterConfig(Builder builder) {
+        this.maxRequests = builder.maxRequests;
+        this.timeWindowInSeconds = builder.timeWindowInSeconds;
+        this.isLogEnabled = builder.isLogEnabled;
+    }
+
+    public int getMaxRequests() { return maxRequests; }
+    public int getTimeWindowInSeconds() { return timeWindowInSeconds; }
+    public boolean isLogEnabled() { return isLogEnabled; }
+
+    // Builder Pattern
+    public static class Builder {
+        private int maxRequests;
+        private int timeWindowInSeconds;
+        private boolean isLogEnabled = false; // default false
+
+        public Builder setMaxRequests(int maxRequests) {
+            this.maxRequests = maxRequests;
+            return this;
+        }
+
+        public Builder setTimeWindowInSeconds(int timeWindowInSeconds) {
+            this.timeWindowInSeconds = timeWindowInSeconds;
+            return this;
+        }
+
+        public Builder setIsLogEnabled(boolean isLogEnabled) {
+            this.isLogEnabled = isLogEnabled;
+            return this;
+        }
+
+        public RateLimiterConfig build() {
+            return new RateLimiterConfig(this);
+        }
+    }
+}
+
+// ------------------------------
+// DECORATOR PATTERN
+// ------------------------------
+interface RateLimiter {
+    boolean handleRequest(String userId);
+}
+
+// Concrete RateLimiter implementation
+class DefaultRateLimiter implements RateLimiter {
+    private final RateLimitingStrategy strategy;
+
+    public DefaultRateLimiter(RateLimitingStrategy strategy) {
+        this.strategy = strategy;
+    }
+
+    @Override
+    public boolean handleRequest(String userId) {
+        return strategy.allowRequest(userId);
+    }
+}
+
+// Logging Decorator (Decorator Pattern)
+class LoggingRateLimiterDecorator implements RateLimiter {
+    private final RateLimiter wrapped;
+
+    public LoggingRateLimiterDecorator(RateLimiter wrapped) {
+        this.wrapped = wrapped;
+    }
+
+    @Override
+    public boolean handleRequest(String userId) {
+        boolean allowed = wrapped.handleRequest(userId);
+        System.out.println("User: " + userId + " => " + (allowed ? "✅ Allowed" : "❌ Blocked"));
+        return allowed;
+    }
+}
+
+// ------------------------------
+// FACTORY PATTERN
+// ------------------------------
+class RateLimiterFactory {
+    // Factory Pattern to manage tier-based instances
+    private static final Map<String, RateLimiter> tierLimiterMap = new HashMap<>();
+    private static final Map<String, RateLimiterConfig> tierConfigMap = new HashMap<>();
+    private static final Map<String, RateLimitingStrategy> tierStrategyMap = new HashMap<>();
+
+    public static void register(String tier, RateLimiterConfig config, RateLimitingStrategy strategy) {
+        tierConfigMap.put(tier, config);
+        tierStrategyMap.put(tier, strategy);
+
+        RateLimiter baseLimiter = new DefaultRateLimiter(strategy);
+        if (config.isLogEnabled()) {
+            baseLimiter = new LoggingRateLimiterDecorator(baseLimiter); // Decorator applied conditionally
+        }
+
+        tierLimiterMap.put(tier, baseLimiter);
+    }
+
+    public static RateLimiter getLimiter(String tier) {
+        return tierLimiterMap.get(tier);
+    }
+
+    // Allow strategy change at runtime (Strategy Pattern in action)
+    public static void updateStrategy(String tier, RateLimitingStrategy newStrategy) {
+        RateLimiterConfig config = tierConfigMap.get(tier);
+        register(tier, config, newStrategy);
+    }
+}
+
+// ------------------------------
+// DRIVER CLASS (Bootstraps the system)
+// ------------------------------
+public class RateLimiterSystem {
+    public static void main(String[] args) throws InterruptedException {
+        // Step 1: Admin creates config using Builder
+        RateLimiterConfig freeConfig = new RateLimiterConfig.Builder()
+            .setMaxRequests(5)
+            .setTimeWindowInSeconds(60)
+            .setIsLogEnabled(true)
+            .build();
+
+        // Step 2: Admin assigns strategy
+        RateLimitingStrategy freeStrategy = new TokenBucketStrategy(5, 1); // Strategy Pattern
+
+        // Step 3: Register with factory
+        //here we are handling singleton nature, but we didn't use singleton pattern because
+        //admins are very less and object explosion will be rare
+        RateLimiterFactory.register("Free", freeConfig, freeStrategy); // Factory Pattern
+
+        // Step 4: Simulate requests
+        RateLimiter freeUserLimiter = RateLimiterFactory.getLimiter("Free");
+
+        System.out.println("=== Making 7 requests as Free User ===");
+        for (int i = 1; i <= 7; i++) {
+            Thread.sleep(500); // wait half second
+            freeUserLimiter.handleRequest("user123");
+        }
+
+        // Step 5: Admin changes algorithm at runtime
+        System.out.println("\n=== Admin switches to a new strategy at runtime ===");
+        RateLimitingStrategy newStrategy = new TokenBucketStrategy(10, 2); // Strategy Pattern
+        RateLimiterFactory.updateStrategy("Free", newStrategy);
+
+        System.out.println("=== Making 3 more requests ===");
+        for (int i = 1; i <= 3; i++) {
+            Thread.sleep(500);
+            freeUserLimiter = RateLimiterFactory.getLimiter("Free");
+            freeUserLimiter.handleRequest("user123");
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
