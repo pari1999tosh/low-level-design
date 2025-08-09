@@ -169,5 +169,230 @@ Remember These Key Arguments:
 5. Transactional Safety
   Template Method ensures that if a step fails, we can abort and leave the file in a consistent state.
   Can also integrate with Command Pattern for undoable file save operations.
+
+
+
+code:
+
+// ===============================================
+// Text Editor LLD
+// Patterns Used:
+// 1. Command Pattern -> For undo/redo and encapsulating operations
+// 2. Template Method Pattern -> For load/save in different document types
+// ===============================================
+
+// ===== Command Pattern Core =====
+interface Command {
+    void execute();
+    void undo();
+}
+
+// Receiver classes
+class Document {
+    private List<String> lines = new ArrayList<>();
+
+    public void insertLine(int index, String text) {
+        lines.add(index, text);
+    }
+
+    public void deleteLine(int index) {
+        lines.remove(index);
+    }
+
+    public String getLine(int index) {
+        return lines.get(index);
+    }
+
+    public List<String> getLines() {
+        return new ArrayList<>(lines);
+    }
+
+    public void setLines(List<String> newLines) {
+        lines = new ArrayList<>(newLines);
+    }
+
+    public void print() {
+        for (int i = 0; i < lines.size(); i++) {
+            System.out.println((i + 1) + ": " + lines.get(i));
+        }
+    }
+}
+
+// Concrete Command: Insert
+class InsertCommand implements Command {
+    private Document document;
+    private int index;
+    private String text;
+
+    public InsertCommand(Document document, int index, String text) {
+        this.document = document;
+        this.index = index;
+        this.text = text;
+    }
+
+    @Override
+    public void execute() {
+        document.insertLine(index, text);
+    }
+
+    @Override
+    public void undo() {
+        document.deleteLine(index);
+    }
+}
+
+// Concrete Command: Delete
+class DeleteCommand implements Command {
+    private Document document;
+    private int index;
+    private String deletedText;
+
+    public DeleteCommand(Document document, int index) {
+        this.document = document;
+        this.index = index;
+    }
+
+    @Override
+    public void execute() {
+        deletedText = document.getLine(index);
+        document.deleteLine(index);
+    }
+
+    @Override
+    public void undo() {
+        document.insertLine(index, deletedText);
+    }
+}
+
+// Invoker: TextEditor
+class TextEditor {
+    private Document document;
+    private Stack<Command> undoStack = new Stack<>();
+    private Stack<Command> redoStack = new Stack<>();
+
+    public TextEditor(Document document) {
+        this.document = document;
+    }
+
+    // Executes a command and stores it for undo
+    public void executeCommand(Command command) {
+        command.execute();
+        undoStack.push(command);
+        redoStack.clear();
+    }
+
+    public void undo() {
+        if (!undoStack.isEmpty()) {
+            Command command = undoStack.pop();
+            command.undo();
+            redoStack.push(command);
+        }
+    }
+
+    public void redo() {
+        if (!redoStack.isEmpty()) {
+            Command command = redoStack.pop();
+            command.execute();
+            undoStack.push(command);
+        }
+    }
+
+    public void printDocument() {
+        document.print();
+    }
+}
+
+// ===== Template Method Pattern Core =====
+abstract class AbstractDocument {
+    protected List<String> content = new ArrayList<>();
+
+    // Template method
+    public final void load(String path) {
+        openFile(path);
+        readContent();
+        validate();
+        closeFile();
+    }
+
+    public final void save(String path) {
+        openFile(path);
+        writeContent();
+        validate();
+        closeFile();
+    }
+
+    // Common step - implemented once
+    protected void openFile(String path) {
+        System.out.println("Opening file: " + path);
+    }
+
+    protected void closeFile() {
+        System.out.println("Closing file");
+    }
+
+    // Steps to be implemented by subclasses
+    protected abstract void readContent();
+    protected abstract void writeContent();
+    protected abstract void validate();
+}
+
+// Concrete Document Type - Text File
+class TextFileDocument extends AbstractDocument {
+    @Override
+    protected void readContent() {
+        System.out.println("Reading content from text file");
+    }
+
+    @Override
+    protected void writeContent() {
+        System.out.println("Writing content to text file");
+    }
+
+    @Override
+    protected void validate() {
+        System.out.println("Validating text file format");
+    }
+}
+
+// ===== Example Usage =====
+public class Main {
+    public static void main(String[] args) {
+        // Command Pattern in action
+        Document doc = new Document();
+        TextEditor editor = new TextEditor(doc);
+
+        editor.executeCommand(new InsertCommand(doc, 0, "Hello World"));
+        editor.executeCommand(new InsertCommand(doc, 1, "This is a text editor"));
+        editor.printDocument();
+
+        System.out.println("Undoing last action...");
+        editor.undo();
+        editor.printDocument();
+
+        System.out.println("Redoing last action...");
+        editor.redo();
+        editor.printDocument();
+
+        // Template Method Pattern in action
+        AbstractDocument textDoc = new TextFileDocument();
+        textDoc.load("file.txt");
+        textDoc.save("file.txt");
+    }
+}
+
+/*
+=======================
+Where Command Pattern is used:
+- InsertCommand, DeleteCommand implement Command interface
+- Each command encapsulates both "do" and "undo" logic
+- TextEditor acts as Invoker, maintains undo/redo stacks
+=======================
+Where Template Method Pattern is used:
+- AbstractDocument defines fixed algorithm for load/save
+- Subclasses (e.g., TextFileDocument) provide specific read/write/validate implementations
+- Common steps (openFile, closeFile) are implemented once
+=======================
+*/
+
   
 
