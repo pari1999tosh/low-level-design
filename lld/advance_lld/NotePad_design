@@ -1,1 +1,173 @@
+Design Notepad for Desktop:
+
+thought process: 
+ Entity: 
+  - Text Editor
+  - Cursor
+  - Document
+  - clipboard
+
+ Service functions:
+  - loadDocument()
+  - saveDocument()
+  - closeDocument()
+  - selectText()
+  - copy()
+  - cut()
+  - paste()
+  - moveCursor()
+
+
+1.1 TextEditor
+Responsibility: facede class for user interactions, delegations to other components.
+
+Key Reasoning:
+Does not store text directly — delegates to Document.
+SRP maintained — only coordinates actions, not implementing them.
+
+Key Methods:
+
+  - openDocument(filePath)
+  - saveDocument(filePath)
+  - moveCursor(line, column)
+  - select(rowStart, rowEnd)
+  - copy(rowStart, rowEnd)
+  - cut(rowStart, rowEnd)
+  - paste(line)
+
+Design Pattern Role: Acts as the client in the Command Pattern.
+
+1.2 Document (Abstract Base Class)
+Responsibility: Stores text and manages file operations.
+
+Variants:
+ - ListDocument (list of strings)
+ - RopeDocument (rope data structure)
+ - PieceTableDocument (piece table model)
+
+Reasoning:
+ Each document type manages its own storage and load/save logic.
+ Future document types don’t require changes in TextEditor.
+
+Key Methods:
+
+ - load(filePath) – abstract
+ - save(filePath) – abstract
+ - getLines(start, end)
+ - removeLines(start, end)
+ - insertLines(position, lines)
+
+Design Pattern Role:
+
+Template Method can be applied here for file I/O (see Step 7).
+
+1.3 Cursor
+Responsibility: Manages current position and selection state.
+Reasoning:
+Keeps TextEditor free from low-level cursor logic.
+
+ - Easy to extend in the future (e.g., column-based selection).
+
+Key Methods:
+ - move(line, column)
+ - select(rowStart, rowEnd)
+ - clearSelection()
+
+Design Pattern Role: None directly, but respects SRP.
+
+1.4 Clipboard
+Responsibility: Stores copied or cut content temporarily.
+
+Reasoning:
+Keeps clipboard logic separate from TextEditor.
+In future, can support multiple clipboard history stacks.
+
+Key Methods:
+ - setContent(lines)
+ - getContent()
+
+Design Pattern Role: Can be a Singleton if we want one clipboard per app instance.
+
+1.5 Command Pattern
+Responsibility: Encapsulates each user action as a command.
+
+Reasoning:
+
+ - Allows undo/redo functionality.
+ - Keeps operations loosely coupled.
+
+Example Commands:
+
+ - CopyCommand, CutCommand, PasteCommand, MoveCursorCommand
+
+Structure:
+
+ - execute() — perform the action.
+
+ - undo() — rollback the action.
+
+2. Key Arguments & Decisions
+2.1 No Singleton Needed for Document
+Reasoning:
+
+We are not allowing concurrent editing of the same document.
+Multiple users can open different documents simultaneously.
+Each document instance is independent.
+
+Singleton would restrict flexibility unnecessarily.
+
+2.2 Command Pattern Justification
+Every operation (cut, copy, paste, move) becomes a command object.
+
+Enables:
+ - Undo/redo
+ - Operation logging
+
+Macro recording
+
+Keeps TextEditor clean by delegating action logic to commands.
+
+2.3 Clipboard as Singleton – Optional
+ - If we want one global clipboard per app session, we can make it Singleton.
+ - If we want per-document clipboard, no Singleton is needed.
+
+3. Special SRP Reasoning
+moveCursor: Delegated to Cursor so changes to movement logic don’t affect TextEditor.
+
+ - select: Delegated to Cursor so different selection models can be added later.
+ - copy: TextEditor only orchestrates; Document and Clipboard hold the logic.
+ - cut: Clipboard + Document changes are transactional.
+
+If one fails, rollback the other.
+
+Could use Command Pattern to wrap this in a reversible operation.
+
+4. Template Method Pattern in Document
+Where Used:
+File I/O operations (load/save).
+
+Why Used:
+Process for saving is:
+
+ - Open file
+ - Write header (optional, varies per format)
+ - Write content
+ - Write footer (optional)
+ - Close file
+
+Fixed skeleton, but variable steps for different file formats.
+
+Benefits:
+  Consistency: All document types follow the same open → write → validate → close structure.
+  Code Reuse: Common steps implemented once in base class.
+  Extensibility: New file types only override the steps that differ.
+
+Remember These Key Arguments:
+  If tomorrow you need to add logging or metrics to the process, you do it once in the base class, and all document types benefit automatically.
+  To add support for a new file format, you don’t rewrite the whole load/save logic — just override the few “variable” steps.
+
+5. Transactional Safety
+  Template Method ensures that if a step fails, we can abort and leave the file in a consistent state.
+  Can also integrate with Command Pattern for undoable file save operations.
+  
 
