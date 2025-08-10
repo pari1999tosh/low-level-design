@@ -1,5 +1,11 @@
 stack overflow low level design:
 
+prerequisistes:
+
+1. singleton.
+2. Strategy
+3. Factory/asbtract factory
+
 system requirements:
    - Users are able to create questions, provide answers, and leave comments on both questions and answers.
    - Users can upvote or downvote questions and answers.
@@ -355,7 +361,6 @@ class Comment extends Post {
 
 enum VoteType {
     UPVOTE(1), DOWNVOTE(-1);
-
     private final int value;
     VoteType(int value) { this.value = value; }
     public int getValue() { return value; }
@@ -502,6 +507,7 @@ class AnswerManager {
                 a.setAccepted(false);
                 User u = UserManager.getInstance().getUser(a.getAuthorId());
                 reputationService.addReputation(u, -15);
+                break;
             }
         }
 
