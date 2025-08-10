@@ -1,1 +1,749 @@
+stack overflow low level design:
+
+system requirements:
+   - Users are able to create questions, provide answers, and leave comments on both questions and answers.
+   - Users can upvote or downvote questions and answers.
+   - Each question must be linked with one or more tags.
+   - Users can search for questions using keywords, tags, or by browsing specific user profiles.
+   - The platform should award reputation points to users according to their activity and the quality of their contributions.
+   - The system must support concurrent usage while maintaining data integrity.
+
+Entity Classes (Core)
+ - User – Represents a registered member who can ask questions, post answers, and vote.
+ - Question – Represents a question posted by a user, containing title, description, tags, and metadata.
+ - Answer – Represents an answer to a specific question, posted by a user.
+ - Tag – Represents a label or keyword associated with a question for categorization.
+ - Comment – Represents a user’s comment on either a question or an answer.
+ - Vote – Represents an upvote or downvote on a question or answer, cast by a user.
+
+Service Functions (Core)
+ - postQuestion(userId, title, description, tags) – Allows a user to create a new question.
+ - postAnswer(userId, questionId, content) – Allows a user to post an answer to a question.
+ - addComment(userId, postId, content) – Adds a comment to a question or answer.
+ - votePost(userId, postId, voteType) – Casts an upvote or downvote on a question or answer.
+ - searchQuestionsByKeyword(keyword) – Retrieves questions containing a given keyword.
+ - searchQuestionsByTag(tag) – Retrieves questions with a specific tag.
+ - acceptAnswer(userId, questionId, answerId) – Marks an answer as accepted for a question (only by the question’s author).
+
+
+
+1. Singleton Pattern
+For central managers/services that hold shared state or coordinate actions globally, like:
+ - QuestionManager
+ - AnswerManager
+ - VoteManager
+ - ReputationService
+
+Ensures there’s only one instance managing questions, votes, reputation, etc., avoiding inconsistent states or object explosion.
+
+2. Strategy Pattern
+For search functionality that supports multiple ways to find questions:
+ - Keyword search
+ - Tag-based search
+ - User profile search
+   Encapsulates each search algorithm behind a common interface, making it easy to add or modify search methods without changing core code.
+
+3. Factory Pattern (Optional/Minimal)
+  To centralize object creation for similar entities (e.g., Question, Answer, Comment) if you want to decouple instantiation from usage — but only if you want to keep object creation clean.
+  Since your domain is simple, this can be skipped or done later as needed.
+
+=======================================================================================================================================================================================
+=======================================================================================================================================================================================
+=======================================================================================================================================================================================
+=======================================================================================================================================================================================
+=======================================================================================================================================================================================
+
+flow diagram:
+
++----------------------+
+|        User          |
++----------------------+
+| - id: int            |
+| - username: String   |
+| - reputation: int    |
++----------------------+
+| + getId()            |
+| + getUsername()      |
+| + getReputation()    |
+| # setReputation(int) |
++----------------------+
+
+        1
+        |
+        *  
++----------------------+
+|        Post          |  <---- abstract base class
++----------------------+
+| - id: int            |
+| - authorId: int      |
+| - content: String    |
+| - score: int         |
+| - comments: List<Comment> |
++----------------------+
+| + getId()            |
+| + getAuthorId()      |
+| + getContent()       |
+| + setContent(String) |
+| + getScore()         |
+| + incrementScore(int)|
+| + getComments()      |
+| + addComment(Comment)|
++----------------------+
+       / | \
+      /  |  \
+     /   |   \
++---------+ +---------+ +-----------+
+|Question | | Answer  | | Comment   |
++---------+ +---------+ +-----------+
+| - title:String       | | - parentPostId: Integer  |
+| - tags:Set<Tag>      | | - parentCommentId: Integer|
+| - answerIds: List<int>| +--------------------------+
++----------------------+ | inherits Post             |
+| + getTitle()          | +--------------------------+
+| + setTitle(String)    |
+| + getTags()           |
+| + addTag(Tag)         |
+| + getAnswerIds()      |
+| + addAnswerId(int)    |
+| + isAccepted()        | (only Answer has this flag)
+| + setAccepted(boolean)|
++----------------------+
+
++----------------------+
+|        Tag           |
++----------------------+
+| - name: String       |
++----------------------+
+| + getName()          |
++----------------------+
+
++----------------------+
+|       VoteType       |   <<enumeration>>
++----------------------+
+| UPVOTE (1)           |
+| DOWNVOTE (-1)        |
++----------------------+
+
++----------------------+
+|        Vote          |
++----------------------+
+| - voterId: int       |
+| - postId: int        |
+| - voteType: VoteType |
++----------------------+
+| + getVoterId()       |
+| + getPostId()        |
+| + getVoteType()      |
++----------------------+
+
++-----------------------------+
+|      ReputationService       |  <<interface>>
++-----------------------------+
+| + addReputation(User, int)  |
++-----------------------------+
+
++--------------------------------+
+|   DefaultReputationService      | (implements ReputationService)
++--------------------------------+
+| + addReputation(User, int)      |
++--------------------------------+
+
++----------------------+
+|     UserManager      |  (Singleton)
++----------------------+
+| - users: Map<int,User>|
+| - userIdSeq: int     |
++----------------------+
+| + createUser(String):User |
+| + getUser(int): User   |
++----------------------+
+
++-------------------------+
+|    QuestionManager      | (Singleton)
++-------------------------+
+| - questions: Map<int, Question> |
+| - questionIdSeq: int             |
++-------------------------+
+| + postQuestion(...) : Question  |
+| + getQuestion(int) : Question   |
+| + addAnswerToQuestion(int, int) |
++-------------------------+
+
++-------------------------+
+|     AnswerManager       | (Singleton)
++-------------------------+
+| - answers: Map<int, Answer>     |
+| - answerIdSeq: int              |
+| - reputationService: ReputationService |
++-------------------------+
+| + postAnswer(...) : Answer     |
+| + getAnswer(int) : Answer      |
+| + acceptAnswer(...)            |
++-------------------------+
+
++-------------------------+
+|    CommentManager       | (Singleton)
++-------------------------+
+| - comments: Map<int, Comment>   |
+| - commentIdSeq: int             |
++-------------------------+
+| + addComment(...) : Comment     |
+| + getComment(int) : Comment     |
++-------------------------+
+
++-------------------------+
+|     VoteManager         | (Singleton)
++-------------------------+
+| - votes: Map<int, Map<int,Vote>> (postId -> voterId -> vote) |
+| - reputationService: ReputationService |
++-------------------------+
+| + vote(voterId, postId, VoteType): boolean |
++-------------------------+
+
++-------------------------+
+|     SearchStrategy      |  <<interface>> (Strategy Pattern)
++-------------------------+
+| + search(String): List<Question> |
++-------------------------+
+
++-------------------------+
+|  KeywordSearchStrategy  | (implements SearchStrategy)
++-------------------------+
+| + search(String): List<Question> |
++-------------------------+
+
++-------------------------+
+|   TagSearchStrategy     | (implements SearchStrategy)
++-------------------------+
+| + search(String): List<Question> |
++-------------------------+
+
++-------------------------+
+|   UserSearchStrategy    | (implements SearchStrategy)
++-------------------------+
+| - userId: int           |
+| + search(String): List<Question> |
++-------------------------+
+
++-------------------------+
+|     SearchService       |
++-------------------------+
+| - strategy: SearchStrategy |
++-------------------------+
+| + setStrategy(SearchStrategy) |
+| + search(String) : List<Question> |
++-------------------------+
+
+
+
+
+
+
+
+=======================================================================================================================================================================================
+=======================================================================================================================================================================================
+=======================================================================================================================================================================================
+=======================================================================================================================================================================================
+=======================================================================================================================================================================================
+
+
+
+code flow:
+
+import java.util.*;
+
+// ======= Entities =======
+
+// User: SRP - manages only user data and state (No business logic here)
+class User {
+    private final int id;
+    private final String username;
+    private int reputation = 0;
+
+    public User(int id, String username) {
+        this.id = id;
+        this.username = username;
+    }
+
+    public int getId() { return id; }
+    public String getUsername() { return username; }
+    public int getReputation() { return reputation; }
+
+    // Protected setter used only by ReputationService to keep encapsulation
+    protected void setReputation(int reputation) {
+        this.reputation = reputation;
+    }
+}
+
+class Tag {
+    private final String name;
+    public Tag(String name) { this.name = name.toLowerCase(); }
+    public String getName() { return name; }
+}
+
+// Base class Post: SRP - holds content, author, score, comments
+abstract class Post {
+    protected final int id;
+    protected final int authorId;
+    protected String content;
+    protected int score = 0;
+    protected final List<Comment> comments = new ArrayList<>();
+
+    public Post(int id, int authorId, String content) {
+        this.id = id;
+        this.authorId = authorId;
+        this.content = content;
+    }
+
+    public int getId() { return id; }
+    public int getAuthorId() { return authorId; }
+    public String getContent() { return content; }
+    public void setContent(String newContent) { content = newContent; }
+    public int getScore() { return score; }
+    public void incrementScore(int delta) { score += delta; }
+    public List<Comment> getComments() { return comments; }
+    public void addComment(Comment comment) { comments.add(comment); }
+}
+
+class Question extends Post {
+    private String title;
+    private final Set<Tag> tags = new HashSet<>();
+    private final List<Integer> answerIds = new ArrayList<>();
+
+    public Question(int id, int authorId, String title, String content, Set<Tag> tags) {
+        super(id, authorId, content);
+        this.title = title;
+        if (tags != null) this.tags.addAll(tags);
+    }
+
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+    public Set<Tag> getTags() { return tags; }
+    public void addTag(Tag tag) { tags.add(tag); }
+    public List<Integer> getAnswerIds() { return answerIds; }
+    public void addAnswerId(int answerId) { answerIds.add(answerId); }
+}
+
+class Answer extends Post {
+    private final int questionId;
+    private boolean isAccepted = false;
+
+    public Answer(int id, int authorId, int questionId, String content) {
+        super(id, authorId, content);
+        this.questionId = questionId;
+    }
+
+    public int getQuestionId() { return questionId; }
+    public boolean isAccepted() { return isAccepted; }
+    public void setAccepted(boolean accepted) { isAccepted = accepted; }
+}
+
+// Comment now inherits from Post (to allow nested comments)
+class Comment extends Post {
+    private final Integer parentPostId;      // question or answer id if top-level comment
+    private final Integer parentCommentId;   // nullable - if comment on comment
+
+    public Comment(int id, int authorId, String content, Integer parentPostId, Integer parentCommentId) {
+        super(id, authorId, content);
+        this.parentPostId = parentPostId;
+        this.parentCommentId = parentCommentId;
+    }
+
+    public Integer getParentPostId() { return parentPostId; }
+    public Integer getParentCommentId() { return parentCommentId; }
+}
+
+enum VoteType {
+    UPVOTE(1), DOWNVOTE(-1);
+
+    private final int value;
+    VoteType(int value) { this.value = value; }
+    public int getValue() { return value; }
+}
+
+class Vote {
+    private final int voterId;
+    private final int postId;  // question, answer, or comment
+    private final VoteType voteType;
+
+    public Vote(int voterId, int postId, VoteType voteType) {
+        this.voterId = voterId;
+        this.postId = postId;
+        this.voteType = voteType;
+    }
+
+    public int getVoterId() { return voterId; }
+    public int getPostId() { return postId; }
+    public VoteType getVoteType() { return voteType; }
+}
+
+// ======= Interfaces and Services =======
+
+// ReputationService interface (DIP)
+interface ReputationService {
+    void addReputation(User user, int delta);
+}
+
+// Default reputation implementation (SRP)
+class DefaultReputationService implements ReputationService {
+    @Override
+    public void addReputation(User user, int delta) {
+        int newRep = user.getReputation() + delta;
+        if (newRep < 0) newRep = 0;  // no negative reputation
+        user.setReputation(newRep);
+    }
+}
+
+// ======= Managers (Singleton Pattern) =======
+
+// UserManager - manages users
+class UserManager {
+    private static UserManager instance;
+    private final Map<Integer, User> users = new HashMap<>();
+    private int userIdSeq = 1;
+
+    private UserManager() {}
+
+    public static UserManager getInstance() {
+        if (instance == null) instance = new UserManager();
+        return instance;
+    }
+
+    public User createUser(String username) {
+        User user = new User(userIdSeq++, username);
+        users.put(user.getId(), user);
+        return user;
+    }
+
+    public User getUser(int id) {
+        return users.get(id);
+    }
+}
+
+// QuestionManager
+class QuestionManager {
+    private static QuestionManager instance;
+    private final Map<Integer, Question> questions = new HashMap<>();
+    private int questionIdSeq = 1;
+
+    private QuestionManager() {}
+
+    public static QuestionManager getInstance() {
+        if (instance == null) instance = new QuestionManager();
+        return instance;
+    }
+
+    public Question postQuestion(int authorId, String title, String content, Set<Tag> tags) {
+        Question q = new Question(questionIdSeq++, authorId, title, content, tags);
+        questions.put(q.getId(), q);
+        return q;
+    }
+
+    public Question getQuestion(int id) {
+        return questions.get(id);
+    }
+
+    public void addAnswerToQuestion(int questionId, int answerId) {
+        Question q = questions.get(questionId);
+        if (q != null) {
+            q.addAnswerId(answerId);
+        }
+    }
+
+    public Collection<Question> getAllQuestions() {
+        return questions.values();
+    }
+}
+
+// AnswerManager (depends on ReputationService)
+class AnswerManager {
+    private static AnswerManager instance;
+    private final Map<Integer, Answer> answers = new HashMap<>();
+    private int answerIdSeq = 1;
+    private final ReputationService reputationService;
+
+    private AnswerManager(ReputationService reputationService) {
+        this.reputationService = reputationService;
+    }
+
+    public static AnswerManager getInstance() {
+        if (instance == null) {
+            instance = new AnswerManager(new DefaultReputationService());
+        }
+        return instance;
+    }
+
+    public Answer postAnswer(int authorId, int questionId, String content) {
+        Answer ans = new Answer(answerIdSeq++, authorId, questionId, content);
+        answers.put(ans.getId(), ans);
+        QuestionManager.getInstance().addAnswerToQuestion(questionId, ans.getId());
+        return ans;
+    }
+
+    public Answer getAnswer(int id) {
+        return answers.get(id);
+    }
+
+    public void acceptAnswer(int questionAuthorId, int answerId) throws Exception {
+        Answer ans = answers.get(answerId);
+        if (ans == null) throw new Exception("Answer not found");
+
+        Question q = QuestionManager.getInstance().getQuestion(ans.getQuestionId());
+        if (q == null) throw new Exception("Question not found");
+
+        if (q.getAuthorId() != questionAuthorId) {
+            throw new Exception("Only question author can accept an answer");
+        }
+
+        // Unaccept any previously accepted answer and reduce rep
+        for (int aid : q.getAnswerIds()) {
+            Answer a = answers.get(aid);
+            if (a != null && a.isAccepted()) {
+                a.setAccepted(false);
+                User u = UserManager.getInstance().getUser(a.getAuthorId());
+                reputationService.addReputation(u, -15);
+            }
+        }
+
+        ans.setAccepted(true);
+        User answerAuthor = UserManager.getInstance().getUser(ans.getAuthorId());
+        reputationService.addReputation(answerAuthor, 15);
+    }
+}
+
+// CommentManager - supports nested comments
+class CommentManager {
+    private static CommentManager instance;
+    private final Map<Integer, Comment> comments = new HashMap<>();
+    private int commentIdSeq = 1;
+
+    private CommentManager() {}
+
+    public static CommentManager getInstance() {
+        if (instance == null) instance = new CommentManager();
+        return instance;
+    }
+
+    /**
+     * Adds a comment.
+     * Either parentPostId or parentCommentId must be non-null to indicate what is being commented on.
+     */
+    public Comment addComment(int authorId, String content, Integer parentPostId, Integer parentCommentId) throws Exception {
+        if (parentPostId == null && parentCommentId == null) {
+            throw new Exception("Either parentPostId or parentCommentId must be specified");
+        }
+
+        Comment c = new Comment(commentIdSeq++, authorId, content, parentPostId, parentCommentId);
+        comments.put(c.getId(), c);
+
+        // Add to parent's comments list
+        if (parentCommentId != null) {
+            Comment parentComment = comments.get(parentCommentId);
+            if (parentComment == null) throw new Exception("Parent comment not found");
+            parentComment.addComment(c);
+        } else if (parentPostId != null) {
+            Post parentPost = findPostById(parentPostId);
+            if (parentPost == null) throw new Exception("Parent post not found");
+            parentPost.addComment(c);
+        }
+
+        return c;
+    }
+
+    public Comment getComment(int id) {
+        return comments.get(id);
+    }
+
+    private Post findPostById(int postId) {
+        Post p = QuestionManager.getInstance().getQuestion(postId);
+        if (p != null) return p;
+        return AnswerManager.getInstance().getAnswer(postId);
+    }
+}
+
+// VoteManager (depends on ReputationService)
+class VoteManager {
+    private static VoteManager instance;
+    private final Map<Integer, Map<Integer, Vote>> votes = new HashMap<>();
+    private final ReputationService reputationService;
+
+    private VoteManager(ReputationService reputationService) {
+        this.reputationService = reputationService;
+    }
+
+    public static VoteManager getInstance() {
+        if (instance == null) {
+            instance = new VoteManager(new DefaultReputationService());
+        }
+        return instance;
+    }
+
+    public boolean vote(int voterId, int postId, VoteType voteType) {
+        votes.putIfAbsent(postId, new HashMap<>());
+        Map<Integer, Vote> votesByVoter = votes.get(postId);
+
+        if (votesByVoter.containsKey(voterId)) {
+            return false; // Duplicate vote
+        }
+
+        Vote vote = new Vote(voterId, postId, voteType);
+        votesByVoter.put(voterId, vote);
+
+        Post post = findPostById(postId);
+        if (post != null) {
+            post.incrementScore(voteType.getValue());
+
+            User author = UserManager.getInstance().getUser(post.getAuthorId());
+            if (author != null) {
+                int repChange = 0;
+                if (voteType == VoteType.UPVOTE) {
+                    if (post instanceof Question) repChange = 5;
+                    else if (post instanceof Answer) repChange = 10;
+                    else if (post instanceof Comment) repChange = 2; // example rep for comment upvote
+                } else {
+                    repChange = -2;
+                }
+                reputationService.addReputation(author, repChange);
+            }
+        }
+        return true;
+    }
+
+    private Post findPostById(int postId) {
+        Post p = QuestionManager.getInstance().getQuestion(postId);
+        if (p != null) return p;
+        p = AnswerManager.getInstance().getAnswer(postId);
+        if (p != null) return p;
+        return CommentManager.getInstance().getComment(postId);
+    }
+}
+
+// ======= Search Strategy Pattern (Strategy Pattern) =======
+
+interface SearchStrategy {
+    List<Question> search(String query);
+}
+
+class KeywordSearchStrategy implements SearchStrategy {
+    public List<Question> search(String keyword) {
+        List<Question> results = new ArrayList<>();
+        for (Question q : QuestionManager.getInstance().getAllQuestions()) {
+            if (q.getTitle().toLowerCase().contains(keyword.toLowerCase()) ||
+                q.getContent().toLowerCase().contains(keyword.toLowerCase())) {
+                results.add(q);
+            }
+        }
+        return results;
+    }
+}
+
+class TagSearchStrategy implements SearchStrategy {
+    public List<Question> search(String tagName) {
+        List<Question> results = new ArrayList<>();
+        for (Question q : QuestionManager.getInstance().getAllQuestions()) {
+            for (Tag t : q.getTags()) {
+                if (t.getName().equalsIgnoreCase(tagName)) {
+                    results.add(q);
+                    break;
+                }
+            }
+        }
+        return results;
+    }
+}
+
+class UserSearchStrategy implements SearchStrategy {
+    private final int userId;
+
+    public UserSearchStrategy(int userId) {
+        this.userId = userId;
+    }
+
+    public List<Question> search(String ignored) {
+        List<Question> results = new ArrayList<>();
+        for (Question q : QuestionManager.getInstance().getAllQuestions()) {
+            if (q.getAuthorId() == userId) {
+                results.add(q);
+            }
+        }
+        return results;
+    }
+}
+
+class SearchService {
+    private SearchStrategy strategy;
+
+    public void setStrategy(SearchStrategy strategy) {
+        this.strategy = strategy;
+    }
+
+    public List<Question> search(String query) {
+        if (strategy == null) throw new IllegalStateException("SearchStrategy not set");
+        return strategy.search(query);
+    }
+}
+
+// ======= Demo Usage =======
+
+public class StackOverflowLLD_V3 {
+    public static void main(String[] args) throws Exception {
+        UserManager userManager = UserManager.getInstance();
+        QuestionManager questionManager = QuestionManager.getInstance();
+        AnswerManager answerManager = AnswerManager.getInstance();
+        VoteManager voteManager = VoteManager.getInstance();
+        CommentManager commentManager = CommentManager.getInstance();
+        SearchService searchService = new SearchService();
+
+        User alice = userManager.createUser("alice");
+        User bob = userManager.createUser("bob");
+        User charlie = userManager.createUser("charlie");
+
+        Set<Tag> tags = new HashSet<>(Arrays.asList(new Tag("java"), new Tag("design-patterns")));
+
+        Question q1 = questionManager.postQuestion(alice.getId(), "What is Singleton pattern?", "Can someone explain?", tags);
+        System.out.println("Question posted: " + q1.getTitle());
+
+        Answer a1 = answerManager.postAnswer(bob.getId(), q1.getId(), "Singleton ensures only one instance.");
+        Answer a2 = answerManager.postAnswer(charlie.getId(), q1.getId(), "Use enums in Java to implement Singleton.");
+
+        commentManager.addComment(charlie.getId(), "Great question!", q1.getId(), null); // comment on question
+        commentManager.addComment(alice.getId(), "Thanks for the explanation.", a1.getId(), null); // comment on answer
+
+        // Nested comment: comment on previous comment
+        Comment parentComment = commentManager.addComment(charlie.getId(), "I agree!", q1.getId(), null);
+        commentManager.addComment(alice.getId(), "Thanks!", null, parentComment.getId());
+
+        voteManager.vote(bob.getId(), q1.getId(), VoteType.UPVOTE);
+        voteManager.vote(alice.getId(), a1.getId(), VoteType.UPVOTE);
+        voteManager.vote(charlie.getId(), a2.getId(), VoteType.UPVOTE);
+
+        answerManager.acceptAnswer(alice.getId(), a1.getId());
+
+        // Search examples
+        searchService.setStrategy(new KeywordSearchStrategy());
+        List<Question> keywordResults = searchService.search("Singleton");
+        System.out.println("Keyword search results: " + keywordResults.size());
+
+        searchService.setStrategy(new TagSearchStrategy());
+        List<Question> tagResults = searchService.search("java");
+        System.out.println("Tag search results: " + tagResults.size());
+
+        searchService.setStrategy(new UserSearchStrategy(bob.getId()));
+        List<Question> userResults = searchService.search(null);
+        System.out.println("User search results: " + userResults.size());
+
+        // Print reputation of users
+        System.out.println("Alice reputation: " + alice.getReputation());
+        System.out.println("Bob reputation: " + bob.getReputation());
+        System.out.println("Charlie reputation: " + charlie.getReputation());
+    }
+}
+
+
+
+
+
+
+
+
 
