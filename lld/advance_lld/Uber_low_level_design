@@ -80,3 +80,301 @@ Service Functions (Business Operations + 1-line use)
     Factory centralizes object creation logic, so new ride types or fare rules can be added without changing service code. This follows Open/Closed Principle.
 
 
+
+=============================================================================================================================================
+=============================================================================================================================================
+=============================================================================================================================================
+=============================================================================================================================================
+=============================================================================================================================================
+=============================================================================================================================================
+
+
+flow diagram of system:
+
+               +-----------------------+
+               |       RideRequest      |
+               +-----------------------+
+               | - pickupLocation       |
+               | - dropLocation         |
+               | - rideType             |
+               +-----------------------+
+                        |
+                        v
+    +-------------------------------------------+
+    | RideMatchingService  (Singleton)          |
+    +-------------------------------------------+
+    | - driverService: DriverService            |
+    | - matchingStrategy: RideMatchingStrategy? |
+    +-------------------------------------------+
+    | + matchDriver(rideRequest)                |
+    +-------------------------------------------+
+                        |
+                        v
+    +-------------------------+
+    | DriverService (Singleton)|
+    +-------------------------+
+    | - activeDrivers[]       |
+    +-------------------------+
+    | + updateLocation()      |
+    | + getNearestDriver()    |
+    +-------------------------+
+                        |
+                        v
+                +------------------+
+                | Driver            |
+                +------------------+
+                | - id             |
+                | - name           |
+                | - vehicle        |
+                +------------------+
+                        
+
+RideService (Singleton)  →  Tracks rides and statuses:
+REQUESTED → ASSIGNED → ONGOING → COMPLETED → CANCELLED
+
+    +--------------------------------+
+    | RideService  (Singleton)       |
+    +--------------------------------+
+    | - rides[]                      |
+    +--------------------------------+
+    | + createRide(request, driver)  |
+    | + updateRideStatus(rideId, s)  |
+    +--------------------------------+
+                        |
+                        v
+    +-------------------------+
+    | Ride                    |
+    +-------------------------+
+    | - id                    |
+    | - driver: Driver        |
+    | - rider: Rider          |
+    | - fare                  |
+    | - status                |
+    +-------------------------+
+
+Fare Calculation:
+
+    +-----------------------------------+
+    | FareCalculationStrategy (interface) |
+    +-----------------------------------+
+    | + calculateFare(ride)             |
+    +-----------------------------------+
+       ^                 ^
+       |                 |
++----------------+  +----------------+
+| SedanFare      |  | SUVFare        |
++----------------+  +----------------+
+
+Factory:
+
+    +----------------------------------------+
+    | FareCalculationStrategyFactory         |
+    +----------------------------------------+
+    | + getStrategy(rideType) : FareCalculationStrategy |
+    +----------------------------------------+
+
+Payment Handling:
+
+    +------------------------------+
+    | PaymentService (Singleton)   |
+    +------------------------------+
+    | + processPayment(ride)       |
+    +------------------------------+
+
+
+=============================================================================================================================================
+=============================================================================================================================================
+=============================================================================================================================================
+=============================================================================================================================================
+=============================================================================================================================================
+=============================================================================================================================================
+=============================================================================================================================================
+=============================================================================================================================================
+=============================================================================================================================================
+=============================================================================================================================================
+=============================================================================================================================================
+=============================================================================================================================================
+=============================================================================================================================================
+
+
+code flow:
+
+// RideSharingApp.java
+
+import java.util.*;
+
+// ---------------------- ENTITY CLASSES ----------------------
+
+abstract class Vehicle {
+    String vehicleId;
+    String model;
+    String plateNumber;
+
+    public Vehicle(String vehicleId, String model, String plateNumber) {
+        this.vehicleId = vehicleId;
+        this.model = model;
+        this.plateNumber = plateNumber;
+    }
+}
+
+class Car extends Vehicle {
+    public Car(String id, String model, String plate) {
+        super(id, model, plate);
+    }
+}
+
+class Bike extends Vehicle {
+    public Bike(String id, String model, String plate) {
+        super(id, model, plate);
+    }
+}
+
+class Driver {
+    String driverId;
+    String name;
+    Vehicle vehicle;
+
+    public Driver(String driverId, String name, Vehicle vehicle) {
+        this.driverId = driverId;
+        this.name = name;
+        this.vehicle = vehicle;
+    }
+}
+
+class Rider {
+    String riderId;
+    String name;
+
+    public Rider(String riderId, String name) {
+        this.riderId = riderId;
+        this.name = name;
+    }
+}
+
+// ---------------------- STRATEGY PATTERN ----------------------
+
+interface FareCalculationStrategy {
+    double calculateFare(double distanceKm);
+}
+
+class StandardFareStrategy implements FareCalculationStrategy {
+    public double calculateFare(double distanceKm) {
+        return 10 + distanceKm * 8; // base + per km
+    }
+}
+
+class PremiumFareStrategy implements FareCalculationStrategy {
+    public double calculateFare(double distanceKm) {
+        return 20 + distanceKm * 15;
+    }
+}
+
+// ---------------------- FACTORY PATTERN ----------------------
+
+abstract class Ride {
+    Rider rider;
+    Driver driver;
+    double distanceKm;
+    FareCalculationStrategy fareStrategy;
+
+    public Ride(Rider rider, Driver driver, double distanceKm, FareCalculationStrategy fareStrategy) {
+        this.rider = rider;
+        this.driver = driver;
+        this.distanceKm = distanceKm;
+        this.fareStrategy = fareStrategy;
+    }
+
+    public void startRide() {
+        System.out.println("Ride started with driver: " + driver.name);
+    }
+
+    public void endRide() {
+        double fare = fareStrategy.calculateFare(distanceKm);
+        System.out.println("Ride ended. Fare: ₹" + fare);
+    }
+}
+
+class StandardRide extends Ride {
+    public StandardRide(Rider rider, Driver driver, double distanceKm) {
+        super(rider, driver, distanceKm, new StandardFareStrategy());
+    }
+}
+
+class PremiumRide extends Ride {
+    public PremiumRide(Rider rider, Driver driver, double distanceKm) {
+        super(rider, driver, distanceKm, new PremiumFareStrategy());
+    }
+}
+
+class RideFactory {
+    public static Ride createRide(String type, Rider rider, Driver driver, double distanceKm) {
+        switch (type.toLowerCase()) {
+            case "standard": return new StandardRide(rider, driver, distanceKm);
+            case "premium": return new PremiumRide(rider, driver, distanceKm);
+            default: throw new IllegalArgumentException("Invalid ride type");
+        }
+    }
+}
+
+// ---------------------- SINGLETON MANAGERS ----------------------
+
+class DriverManager {
+    private static DriverManager instance;
+    private List<Driver> drivers = new ArrayList<>();
+
+    private DriverManager() {}
+
+    public static DriverManager getInstance() {
+        if (instance == null) instance = new DriverManager();
+        return instance;
+    }
+
+    public void registerDriver(Driver driver) {
+        drivers.add(driver);
+    }
+
+    public Driver findAvailableDriver() {
+        // For simplicity, return the first one
+        return drivers.isEmpty() ? null : drivers.get(0);
+    }
+}
+
+class RideManager {
+    private static RideManager instance;
+
+    private RideManager() {}
+
+    public static RideManager getInstance() {
+        if (instance == null) instance = new RideManager();
+        return instance;
+    }
+
+    public Ride bookRide(String rideType, Rider rider, double distanceKm) {
+        Driver driver = DriverManager.getInstance().findAvailableDriver();
+        if (driver == null) throw new RuntimeException("No drivers available");
+        return RideFactory.createRide(rideType, rider, driver, distanceKm);
+    }
+}
+
+// ---------------------- CLIENT ----------------------
+
+public class RideSharingApp {
+    public static void main(String[] args) {
+        // Setup
+        DriverManager driverManager = DriverManager.getInstance();
+        driverManager.registerDriver(new Driver("D1", "Amit", new Car("V1", "Toyota", "UP32AB1234")));
+
+        Rider rider = new Rider("R1", "Paritosh");
+
+        // Booking
+        RideManager rideManager = RideManager.getInstance();
+        Ride ride = rideManager.bookRide("Premium", rider, 12.5);
+
+        // Ride lifecycle
+        ride.startRide();
+        ride.endRide();
+    }
+}
+
+
+
