@@ -292,10 +292,7 @@ code:
 
 
 // ===== Command Pattern Core =====
-interface Command {
-    void execute();
-    void undo();
-}
+
 
 // Receiver classes
 class Document {
@@ -326,6 +323,11 @@ class Document {
             System.out.println((i + 1) + ": " + lines.get(i));
         }
     }
+}
+
+interface Command {
+    void execute();
+    void undo();
 }
 
 // Concrete Command: Insert
