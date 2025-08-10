@@ -1,0 +1,82 @@
+Uber low level design: 
+
+Passengers can request a ride by providing:
+ - Pickup location
+ - Destination location
+ - Ride type (e.g., Regular or Premium)
+Drivers can:
+ - Go online or offline
+ - View nearby ride requests
+ - Accept or decline a request
+The system should:
+ - Match ride requests with the nearest available driver
+ - Update ride status as: REQUESTED → ASSIGNED → ONGOING → COMPLETED → CANCELLED
+ - Calculate fare based on distance and ride type (ignore time-based fare for now)
+
+
+why's and why not's:
+ 1. cancelling ride, booking ride etc are commands but we still don't use command patttern because cancelling is undo of booking
+    but booking is not redo of cancelling. undo/redo is not a focus area here because it is irreversible.
+
+Prerequisistes:
+ 1. Singleton.
+ 2. Strategy.
+ 3. Factory.
+
+General Steps for any low level design interview( Link in Description)
+
+1. Identify entity classes and service functions.
+
+Entity Classes (Nouns + 1-line use)
+  Passenger – Represents a user requesting a ride.
+  Driver – Represents a user who can accept and fulfill ride requests.
+  Location – Holds latitude/longitude for pickup or destination.
+  RideRequest – Stores passenger request details: pickup, destination, ride type, status.
+  Ride – Represents an ongoing or completed ride (links Passenger, Driver, and RideRequest).
+  RideType (enum) – Defines ride categories (REGULAR, PREMIUM) for fare calculation.
+  DriverStatus (enum) – Tracks driver availability (ONLINE, OFFLINE, BUSY).
+
+Service Functions (Business Operations + 1-line use)
+  Passenger actions
+    requestRide(pickup, destination, rideType) – Create a new ride request.
+    cancelRide(rideId) – Cancel a ride before it starts.
+  
+  Driver actions
+    goOnline(driverId) – Make driver available for matching.
+    goOffline(driverId) – Make driver unavailable for matching.
+    acceptRide(rideRequestId) – Assign the ride to the driver.
+    declineRide(rideRequestId) – Remove ride request from driver’s list.
+  
+  Core system operations
+    matchRide(rideRequest) – Find nearest available driver for the request.
+    calculateFare(distance, rideType) – Compute ride fare based on rules.
+    updateDriverLocation(driverId, location) – Keep driver’s position updated in system.
+    updateRideStatus(rideId, status) – Change ride’s lifecycle state.
+
+
+2. Identify which patterns you can use:
+
+   Services that are stateful across the whole system and should have only one instance:
+    - DriverService – maintains the list of active drivers, their locations, and statuses system-wide.
+    - RideMatchingService – central authority to assign rides to drivers.
+    - PaymentService – handles fare calculation and payments consistently.
+    - RideService – keeps track of rides and their statuses; central source of truth.
+
+   Interview reasoning: These are all “system managers” with global state. Having multiple instances would cause inconsistent data or duplicate processing.
+                        Singleton ensures a single point of coordination.
+
+  Strategy Pattern
+    We use this where behavior can vary at runtime without changing the main service logic.
+    FareCalculationStrategy – calculate fare differently for different ride types (e.g., SedanFareStrategy, SUVFareStrategy).
+    RideMatchingStrategy (optional extension) – current requirement says “nearest driver,” 
+    but we can easily add “highest-rated driver” or “cheapest driver” later without touching RideMatchingService.
+
+  Factory Pattern
+    Used when object creation depends on dynamic input and we want to avoid cluttering code with if-else or switch.
+    FareCalculationStrategyFactory – returns the correct fare strategy based on ride type (Sedan, SUV, etc.).
+    RideFactory (optional) – if tomorrow different ride subtypes are introduced with specific fields, this can encapsulate their creation.
+
+💡 Interview reasoning:
+    Factory centralizes object creation logic, so new ride types or fare rules can be added without changing service code. This follows Open/Closed Principle.
+
+
