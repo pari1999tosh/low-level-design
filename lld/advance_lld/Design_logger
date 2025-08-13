@@ -1,0 +1,242 @@
+Requirements:
+ - The logging framework should support different log levels, such as DEBUG, INFO, WARNING, ERROR, and FATAL.
+ - It should allow logging messages with a timestamp, log level, and message content.
+ - The framework should support multiple output destinations, such as console, file, and database.
+ - It should provide a configuration mechanism to set the log level and output destination.
+ - The logging framework should be thread-safe to handle concurrent logging from multiple threads.
+ - It should be extensible to accommodate new log levels and output destinations in the future.
+
+
+
+Entity / Core Classes
+ - LogLevel (enum) – Defines levels like DEBUG, INFO, WARNING, ERROR, FATAL.
+ - LogMessage – Holds timestamp, log level, and message content.
+ - LoggerConfiguration (Singleton) – Stores global log level and output destination, modifiable only by admins.
+ - Logger (Singleton) – Public API for logging messages, consults LoggerConfiguration to decide whether to log.
+ - LogDestination (interface) – Contract for writing logs to a specific output.
+ - ConsoleDestination – Implementation of LogDestination that logs to console.
+ - FileDestination – Implementation of LogDestination that logs to a file.
+ - DatabaseDestination – Implementation of LogDestination that logs to a database.
+
+Service Functions
+ - LoggerConfiguration.setLogLevel(LogLevel level) – Set the global log level.
+ - LoggerConfiguration.setDestination(LogDestination dest) – Set the global output destination.
+ - Logger.log(LogLevel level, String message) – Logs a message if its level is ≥ configured level.
+ - LogDestination.write(LogMessage msg) – Writes the log message to the output destination.
+
+Patterns Used
+ - Singleton Pattern – For Logger and LoggerConfiguration to ensure only one global instance.
+ - Strategy Pattern – For pluggable output destinations (LogDestination interface + different implementations).
+ - Factory Pattern (optional) – For creating LogDestination objects from config strings (e.g., "console", "file").
+
+
+                       ┌───────────────────┐
+             Admin →   │ LoggerConfiguration│
+                       │  (Singleton)       │
+                       │--------------------│
+                       │ setLogLevel(...)   │
+                       │ setDestination(...)│
+                       └─────────┬──────────┘
+                                 │
+                                 │ Uses
+                                 ▼
+                       ┌────────────────────┐
+                       │ DestinationFactory  │
+                       │---------------------│
+                       │ createDestination() │
+                       └─────────┬───────────┘
+                                 │
+                                 ▼
+                  ┌───────────────────────────┐
+                  │ LogDestination (Interface) │
+                  ├────────────────────────────┤
+                  │ + write(LogMessage msg)    │
+                  └─────┬─────────┬────────────┘
+                        │         │
+             ┌──────────▼─┐   ┌───▼───────────┐
+             │ConsoleDest │   │FileDestination│
+             └────────────┘   └───────────────┘
+                        │
+                        │
+                ┌───────▼────────┐
+                │ Logger (Singleton) │
+                │------------------│
+                │ log(level,msg)   │
+                └───────┬─────────┘
+                        │
+                        ▼
+                (writes to chosen destination)
+
+
+import java.io.FileWriter;
+import java.io.IOException;
+import java.time.LocalDateTime;
+
+// ===== ENUM =====
+enum LogLevel {
+    INFO, WARN, ERROR
+}
+
+// ===== ENTITY: LogMessage =====
+class LogMessage {
+    private final LocalDateTime timestamp;
+    private final LogLevel level;
+    private final String content;
+
+    public LogMessage(LogLevel level, String content) {
+        this.timestamp = LocalDateTime.now();
+        this.level = level;
+        this.content = content;
+    }
+
+    public String format() {
+        return "[" + timestamp + "] [" + level + "] " + content;
+    }
+}
+
+// ===== INTERFACE: LogDestination =====
+interface LogDestination {
+    void write(LogMessage message);
+}
+
+// ===== STRATEGY: ConsoleDestination =====
+class ConsoleDestination implements LogDestination {
+    public void write(LogMessage message) {
+        System.out.println(message.format());
+    }
+}
+
+// ===== STRATEGY: FileDestination =====
+class FileDestination implements LogDestination {
+    private final String filePath = "logs.txt";
+
+    public void write(LogMessage message) {
+        try (FileWriter fw = new FileWriter(filePath, true)) {
+            fw.write(message.format() + "\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+// ===== STRATEGY: DatabaseDestination =====
+class DatabaseDestination implements LogDestination {
+    public void write(LogMessage message) {
+        // Simulating DB write
+        System.out.println("DB WRITE: " + message.format());
+    }
+}
+
+// ===== FACTORY PATTERN =====
+class LogDestinationFactory {
+    public static LogDestination createDestination(String type) {
+        switch (type.toLowerCase()) {
+            case "console": return new ConsoleDestination();
+            case "file": return new FileDestination();
+            case "database": return new DatabaseDestination();
+            default: throw new IllegalArgumentException("Unknown destination type: " + type);
+        }
+    }
+}
+
+// ===== SINGLETON: LoggerConfiguration =====
+class LoggerConfiguration {
+    private static volatile LoggerConfiguration instance;
+    private LogLevel logLevel;
+    private LogDestination destination;
+
+    private LoggerConfiguration() {
+        // Default config
+        this.logLevel = LogLevel.INFO;
+        this.destination = LogDestinationFactory.createDestination("console");
+    }
+
+    public static LoggerConfiguration getInstance() {
+        if (instance == null) {
+            synchronized (LoggerConfiguration.class) { //to make it thread safe when multiple admin try to update config
+                if (instance == null) {
+                    instance = new LoggerConfiguration();
+                }
+            }
+        }
+        return instance;
+    }
+
+    public synchronized void setLogLevel(LogLevel logLevel) {
+        this.logLevel = logLevel;
+    }
+
+    public synchronized void setDestination(LogDestination destination) {
+        this.destination = destination;
+    }
+
+    public LogLevel getLogLevel() {
+        return logLevel;
+    }
+
+    public LogDestination getDestination() {
+        return destination;
+    }
+}
+
+// ===== SINGLETON: Logger =====
+class Logger {
+    private static volatile Logger instance;
+    private final LoggerConfiguration config = LoggerConfiguration.getInstance();
+
+    private Logger() {}
+
+    public static Logger getInstance() {
+        if (instance == null) {
+            synchronized (Logger.class) {
+                if (instance == null) {
+                    instance = new Logger();
+                }
+            }
+        }
+        return instance;
+    }
+
+    public void log(LogLevel level, String message) {
+        if (level.ordinal() >= config.getLogLevel().ordinal()) {
+            LogMessage logMessage = new LogMessage(level, message);
+            config.getDestination().write(logMessage);
+        }
+    }
+}
+
+// ===== DEMO / CLIENT =====
+public class LoggingSystemDemo {
+    public static void main(String[] args) {
+        // Admin sets global config
+        LoggerConfiguration config = LoggerConfiguration.getInstance();
+        config.setLogLevel(LogLevel.WARN);
+        config.setDestination(LogDestinationFactory.createDestination("file"));
+
+        // User code logs messages
+        Logger logger = Logger.getInstance();
+        logger.log(LogLevel.INFO, "This is an info message (should NOT appear).");
+        logger.log(LogLevel.WARN, "This is a warning message.");
+        logger.log(LogLevel.ERROR, "This is an error message.");
+
+        // Admin changes config at runtime
+        config.setDestination(LogDestinationFactory.createDestination("console"));
+        logger.log(LogLevel.ERROR, "Now logging to console.");
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
