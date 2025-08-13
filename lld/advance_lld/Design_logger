@@ -101,7 +101,10 @@ interface LogDestination {
 
 // ===== STRATEGY: ConsoleDestination =====
 class ConsoleDestination implements LogDestination {
+    
+    @override
     public void write(LogMessage message) {
+
         System.out.println(message.format());
     }
 }
@@ -109,8 +112,9 @@ class ConsoleDestination implements LogDestination {
 // ===== STRATEGY: FileDestination =====
 class FileDestination implements LogDestination {
     private final String filePath = "logs.txt";
-
+    @override
     public void write(LogMessage message) {
+
         try (FileWriter fw = new FileWriter(filePath, true)) {
             fw.write(message.format() + "\n");
         } catch (IOException e) {
