@@ -141,7 +141,8 @@ class LogDestinationFactory {
 
 // ===== SINGLETON: LoggerConfiguration =====
 class LoggerConfiguration {
-    private static volatile LoggerConfiguration instance;
+    private static volatile LoggerConfiguration instance;// When one thread updates the instance variable, 
+                                                         // other threads immediately see the change.
     private LogLevel logLevel;
     private LogDestination destination;
 
