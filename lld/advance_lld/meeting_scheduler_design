@@ -1,3 +1,15 @@
+meeting scheduler:
+
+Users can book any meeting room from (start time to end time) if the room is available.
+If a room is not available, it should be shown at that moment only.
+All the participants of a meeting should receive a notification related to the same.
+Store the history of all the meetings scheduled.
+Users can see all the available meeting rooms for a particular time slot ( can be neglected for implementation but is good to discuss)
+
+
+
+
+
 Entity Classes
    User – represents organizer/participant.
    MeetingRoom – represents a bookable room (default: table & chairs).
