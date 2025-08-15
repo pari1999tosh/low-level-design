@@ -244,6 +244,7 @@ class Participant implements Observer {
 }
 
 // ===== Entity: Booking (Builder Pattern) =====
+
 class Booking {
     private MeetingRoom room;
     private Date startTime;
@@ -370,6 +371,7 @@ class ACDecorator extends RoomDecorator {
 
 // ===== Booking Service =====
 class BookingService {
+    
     private List<MeetingRoom> rooms = new ArrayList<>();
     private List<Booking> bookings = new ArrayList<>();
 
@@ -441,7 +443,7 @@ public class MeetingRoomBookingSystem {
         Participant alice = new Participant("Alice", new EmailNotification());
         Participant bob = new Participant("Bob", new SMSNotification());
         Participant charlie = new Participant("Charlie", new PushNotification());
-
+       
         Booking booking = new Booking.Builder(r1, start, end)
                 .addParticipant(alice)
                 .addParticipant(bob)
