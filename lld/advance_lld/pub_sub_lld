@@ -1,1 +1,345 @@
+publisher-subscriber model:
+1. The Pub-Sub system should allow publishers to publish messages to specific topics.
+2. Subscribers should be able to subscribe to topics of interest and receive messages published to those topics.
+3. The system should support multiple publishers and subscribers.
+4. Messages should be delivered to all subscribers of a topic in real-time.
+5. The system should handle concurrent access and ensure thread safety.
+6. The Pub-Sub system should be scalable and efficient in terms of message delivery.
+
+
+
+
+          +-------------+
+          |   Publisher |
+          +-------------+
+                 |
+                 | publish(message, topicName)
+                 v
+          +-------------+
+          |   Broker    |   (Singleton, shared state)
+          +-------------+
+                 |
+        +--------+---------+
+        |                  |
+        v                  v
+   +----------+       +----------+
+   |  Topic A |       |  Topic B |
+   +----------+       +----------+
+        |                  |
+   +----+----+        +----+----+
+   | Subscriber 1 |   | Subscriber 3 |
+   | Subscriber 2 |   | Subscriber 4 |
+   +-------------+    +-------------+
+
+
+entities: 
+  Publisher
+  Subscriber
+  Message
+  Topic
+  Broker (central manager, Singleton)
+  Subscription (link between Subscriber and Topic)
+
+✅ Step 2: Functions (other than getters/setters)
+Publisher
+  publishMessage(topicName, message)
+Subscriber
+  subscribe(topicName)
+  unsubscribe(topicName)
+  receiveMessage(message)
+
+Topic
+  addSubscriber(subscriber)
+  removeSubscriber(subscriber)
+  notifySubscribers(message)
+
+Broker
+  registerTopic(topicName)
+  getTopic(topicName)
+  subscribe(subscriber, topicName)
+  unsubscribe(subscriber, topicName)
+  publish(topicName, message)
+
+
+Design Patterns:
+Singleton Pattern:
+  Broker is central shared state:
+  Holds Map<String, Topic>
+  Multiple publishers and subscribers interact with it concurrently.
+
+Strategy Pattern:
+  PushDeliveryStrategy (default, real-time).
+  (Optional extension: Pull-based delivery if required later).
+  So, DeliveryStrategy is still useful to keep things extensible.
+
+
+
+class Diagram:
+ +----------------+         1        *       +----------------+
+|    Publisher   |------------------------>|     Broker     |
++----------------+                         +----------------+
+| - name: String |                         | - topics: Map<String, Topic> |
++----------------+                         | - instance: Broker           |
+| +publishMessage(topicName, message)      | +getInstance(): Broker       |
++----------------+                         | +registerTopic(topicName)   |
+                                           | +getTopic(topicName)        |
+                                           | +subscribe(subscriber, topicName) |
+                                           | +unsubscribe(subscriber, topicName) |
+                                           | +publish(topicName, message) |
+                                           +----------------+
+                                                    |
+                                                    | 1       *
+                                                    | 
+                                           +----------------+
+                                           |      Topic     |
+                                           +----------------+
+                                           | - name: String |
+                                           | - subscribers: Set<Subscriber> |
+                                           +----------------+
+                                           | +addSubscriber(subscriber)     |
+                                           | +removeSubscriber(subscriber)  |
+                                           | +notifySubscribers(message)    |
+                                           +----------------+
+                                                    ^
+                                                    | *
+                                                    |
+                                           +----------------+
+                                           |   Subscriber   |
+                                           +----------------+
+                                           | - name: String |
+                                           | - subscribedTopics: Set<String> |
+                                           +----------------+
+                                           | +subscribe(topicName)          |
+                                           | +unsubscribe(topicName)        |
+                                           | +receiveMessage(message)       |
+                                           +----------------+
+
++----------------+
+|     Message    |
++----------------+
+| - content: String |
+| - timestamp: Date |
+| - publisher: Publisher |
++----------------+
+| +getContent()      |
+| +getTimestamp()    |
+| +getPublisher()    |
++----------------+
+
+
+full code in one line:
+
+import java.util.*;
+
+// ======================== Message ========================
+class Message {
+    private String content;
+    private Date timestamp;
+    private Publisher publisher;
+
+    public Message(String content, Publisher publisher) {
+        this.content = content;
+        this.publisher = publisher;
+        this.timestamp = new Date();
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public Date getTimestamp() {
+        return timestamp;
+    }
+
+    public Publisher getPublisher() {
+        return publisher;
+    }
+}
+
+// ======================== Publisher ========================
+class Publisher {
+    private String name;
+
+    public Publisher(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void publishMessage(String topicName, String content) {
+        Message message = new Message(content, this);
+        Broker.getInstance().publish(topicName, message);
+        System.out.println("Publisher " + name + " published message to topic " + topicName);
+    }
+}
+
+// ======================== Subscriber ========================
+class Subscriber {
+    private String name;
+    private Set<String> subscribedTopics;
+
+    public Subscriber(String name) {
+        this.name = name;
+        this.subscribedTopics = new HashSet<>();
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void subscribe(String topicName) {
+        if (subscribedTopics.contains(topicName)) return;
+        subscribedTopics.add(topicName);
+        Broker.getInstance().subscribe(this, topicName);
+        System.out.println("Subscriber " + name + " subscribed to " + topicName);
+    }
+
+    public void unsubscribe(String topicName) {
+        if (!subscribedTopics.contains(topicName)) return;
+        subscribedTopics.remove(topicName);
+        Broker.getInstance().unsubscribe(this, topicName);
+        System.out.println("Subscriber " + name + " unsubscribed from " + topicName);
+    }
+
+    public void receiveMessage(Message message) {
+        System.out.println("Subscriber " + name + " received message from " +
+                message.getPublisher().getName() + ": " + message.getContent());
+    }
+}
+
+// ======================== Topic ========================
+class Topic {
+    private String name;
+    private Set<Subscriber> subscribers;
+
+    public Topic(String name) {
+        this.name = name;
+        this.subscribers = new HashSet<>();
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void addSubscriber(Subscriber subscriber) {
+        subscribers.add(subscriber);
+    }
+
+    public void removeSubscriber(Subscriber subscriber) {
+        subscribers.remove(subscriber);
+    }
+
+    public void notifySubscribers(Message message) {
+        for (Subscriber subscriber : subscribers) {
+            subscriber.receiveMessage(message);
+        }
+    }
+}
+
+// ======================== Broker (Singleton) ========================
+class Broker {
+    private Map<String, Topic> topics;
+    private static Broker instance = null;
+
+    private Broker() {
+        topics = new HashMap<>();
+    }
+
+    public static Broker getInstance() {
+        if (instance == null) {
+            synchronized (Broker.class) {
+                if (instance == null) {
+                    instance = new Broker();
+                }
+            }
+        }
+        return instance;
+    }
+
+    public void registerTopic(String topicName) {
+        topics.putIfAbsent(topicName, new Topic(topicName));
+        System.out.println("Topic " + topicName + " registered in Broker");
+    }
+
+    public Topic getTopic(String topicName) {
+        return topics.get(topicName);
+    }
+
+    public void subscribe(Subscriber subscriber, String topicName) {
+        Topic topic = topics.get(topicName);
+        if (topic != null) {
+            topic.addSubscriber(subscriber);
+        } else {
+            System.out.println("Topic " + topicName + " does not exist.");
+        }
+    }
+
+    public void unsubscribe(Subscriber subscriber, String topicName) {
+        Topic topic = topics.get(topicName);
+        if (topic != null) {
+            topic.removeSubscriber(subscriber);
+        }
+    }
+
+    public void publish(String topicName, Message message) {
+        Topic topic = topics.get(topicName);
+        if (topic != null) {
+            topic.notifySubscribers(message);
+        } else {
+            System.out.println("Topic " + topicName + " does not exist.");
+        }
+    }
+}
+
+// ======================== Demo ========================
+public class PubSubDemo {
+    public static void main(String[] args) {
+        Broker broker = Broker.getInstance();
+
+        // Register topics
+        broker.registerTopic("Sports");
+        broker.registerTopic("Finance");
+
+        // Create subscribers
+        Subscriber alice = new Subscriber("Alice");
+        Subscriber bob = new Subscriber("Bob");
+        Subscriber charlie = new Subscriber("Charlie");
+
+        // Subscribe to topics
+        alice.subscribe("Sports");
+        bob.subscribe("Finance");
+        charlie.subscribe("Sports");
+        charlie.subscribe("Finance");
+
+        // Create publishers
+        Publisher espn = new Publisher("ESPN");
+        Publisher bloomberg = new Publisher("Bloomberg");
+
+        // Publish messages
+        espn.publishMessage("Sports", "India won the match!");
+        bloomberg.publishMessage("Finance", "Stock market hits new high!");
+        espn.publishMessage("Finance", "Sports channel also reporting finance news");
+
+        // Unsubscribe
+        charlie.unsubscribe("Sports");
+
+        // Publish again
+        espn.publishMessage("Sports", "Next match schedule announced");
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
