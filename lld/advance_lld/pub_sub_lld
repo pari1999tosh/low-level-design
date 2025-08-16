@@ -67,12 +67,6 @@ Singleton Pattern:
   Holds Map<String, Topic>
   Multiple publishers and subscribers interact with it concurrently.
 
-Strategy Pattern:
-  PushDeliveryStrategy (default, real-time).
-  (Optional extension: Pull-based delivery if required later).
-  So, DeliveryStrategy is still useful to keep things extensible.
-
-
 
 class Diagram:
  +----------------+         1        *       +----------------+
