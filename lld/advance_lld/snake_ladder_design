@@ -1,0 +1,219 @@
+problem statement:
+The game should be played on a board with numbered cells, typically with 100 cells.
+The board should have a predefined set of snakes and ladders, connecting certain cells.
+The game should support multiple players, each represented by a unique game piece.
+Players should take turns rolling a dice to determine the number of cells to move forward.
+If a player lands on a cell with the head of a snake, they should slide down to the cell with the tail of the snake.
+If a player lands on a cell with the base of a ladder, they should climb up to the cell at the top of the ladder.
+The game should continue until one of the players reaches the final cell on the board.
+The game should handle multiple game sessions concurrently, allowing different groups of players to play independently.
+
+
+entity:
+ - cell
+ - Board
+ - player
+ - dice //seperate class if u later want to modify the probability of various no in dice
+ - gameState
+
+services:
+ startGame(List<Player> players) → initialize players, set state = IN_PROGRESS
+ playTurn(Player player) → roll dice, move, apply snake/ladder
+ movePlayer(Player player, int steps) → update position safely (apply jumps, check win)
+ checkWin(Player player) → see if reached 100
+ endGame() → set state = FINISHED
+
+
+class Diagram:
+
+                ┌─────────────┐
+                │   GameState │
+                │─────────────│
+                │ NOT_STARTED │
+                │ IN_PROGRESS │
+                │  FINISHED   │
+                └──────┬──────┘
+                       │
+              ┌────────▼────────┐
+              │  GameService    │   (Singleton)
+              │─────────────────│
+              │ - board: Board  │
+              │ - dice: Dice    │
+              │ - players: List │
+              │ - state: State  │
+              │─────────────────│
+              │ + startGame()   │
+              │ + playTurn()    │
+              │ + movePlayer()  │
+              │ + checkWin()    │
+              │ + endGame()     │
+              └────────┬────────┘
+                       │
+   ┌───────────────────┼───────────────────┐
+   │                   │                   │
+┌──▼───┐          ┌────▼────┐         ┌────▼─────┐
+│ Dice │          │  Player │         │  Board   │
+│──────│          │─────────│         │──────────│
+│sides │          │name     │         │size      │
+│roll()│          │position │         │cells:Map │
+└──────┘          └─────────┘         │getNextPos│
+                                      └────┬─────┘
+                                           │
+                                     ┌─────▼─────┐
+                                     │   Cell    │
+                                     │───────────│
+                                     │ start     │
+                                     │ end       │
+                                     └───────────┘
+
+
+
+
+
+java code:
+
+import java.util.*;
+
+// Enum for game state
+enum GameState {
+    NOT_STARTED, IN_PROGRESS, FINISHED
+}
+
+// Player entity
+class Player {
+    private String name;
+    private int position;
+
+    public Player(String name) {
+        this.name = name;
+        this.position = 0; // start at cell 0
+    }
+
+    public String getName() { return name; }
+    public int getPosition() { return position; }
+    public void setPosition(int pos) { this.position = pos; }
+}
+
+// Represents a snake or ladder (Jump)
+class Jump {
+    private final int start;
+    private final int end;
+
+    public Jump(int start, int end) {
+        this.start = start;
+        this.end = end;
+    }
+
+    public int getStart() { return start; }
+    public int getEnd() { return end; }
+}
+
+// Dice entity
+class Dice {
+    private final int min = 1;
+    private final int max = 6;
+    private final Random random;
+
+    public Dice() {
+        this.random = new Random();
+    }
+
+    public int roll() {
+        return random.nextInt(max - min + 1) + min;
+    }
+}
+
+// Flyweight Singleton for shared board
+class GameBoard {
+    private static GameBoard instance;
+    private final Map<Integer, Jump> jumps;
+
+    private GameBoard() {
+        jumps = new HashMap<>();
+        // Define snakes and ladders (predefined, same for all games)
+        addJump(2, 23);   // ladder
+        addJump(8, 34);   // ladder
+        addJump(20, 77);  // ladder
+        addJump(32, 68);  // ladder
+        addJump(99, 5);   // snake
+        addJump(95, 24);  // snake
+        addJump(92, 51);  // snake
+        addJump(48, 9);   // snake
+    }
+
+    public static GameBoard getInstance() {
+        if (instance == null) {
+            instance = new GameBoard();
+        }
+        return instance;
+    }
+
+    private void addJump(int start, int end) {
+        jumps.put(start, new Jump(start, end));
+    }
+
+    public int getNextPosition(int pos) {
+        if (jumps.containsKey(pos)) {
+            return jumps.get(pos).getEnd();
+        }
+        return pos;
+    }
+}
+
+// Core service class
+class GameService {
+    private final Queue<Player> players;
+    private final Dice dice;
+    private GameState state;
+    private final GameBoard board;
+
+    public GameService(List<String> playerNames) {
+        this.players = new LinkedList<>();
+        for (String name : playerNames) {
+            players.add(new Player(name));
+        }
+        this.dice = new Dice();
+        this.state = GameState.NOT_STARTED;
+        this.board = GameBoard.getInstance(); // shared board
+    }
+
+    public void startGame() {
+        state = GameState.IN_PROGRESS;
+        System.out.println("Game Started!");
+        play();
+    }
+
+    private void play() {
+        while (state == GameState.IN_PROGRESS) {
+            Player current = players.poll();
+            int roll = dice.roll();
+            int newPos = current.getPosition() + roll;
+
+            if (newPos > 100) {
+                // must land exactly on 100
+                System.out.println(current.getName() + " rolled " + roll + " but overshoots 100. Staying at " + current.getPosition());
+            } else {
+                newPos = board.getNextPosition(newPos);
+                current.setPosition(newPos);
+                System.out.println(current.getName() + " rolled " + roll + " and moved to " + newPos);
+
+                if (newPos == 100) {
+                    System.out.println(current.getName() + " wins!");
+                    state = GameState.FINISHED;
+                    break;
+                }
+            }
+
+            players.add(current);
+        }
+    }
+}
+
+// Main driver
+public class SnakesAndLadders {
+    public static void main(String[] args) {
+        List<String> playerNames = Arrays.asList("Alice", "Bob", "Charlie");
+        GameService game = new GameService(playerNames);
+        game.startGame();
+    }
+}
