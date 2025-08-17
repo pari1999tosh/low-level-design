@@ -1,1 +1,134 @@
+problem statement:
+
+The elevator system should consist of multiple elevators serving multiple floors.
+Each elevator should have a capacity limit and should not exceed it.
+Users should be able to request an elevator from any floor and select a destination floor.
+The elevator system should efficiently handle user requests and optimize the movement of elevators to minimize waiting time.
+The system should prioritize requests based on the direction of travel and the proximity of the elevators to the requested floor.
+The elevators should be able to handle multiple requests concurrently and process them in an optimal order.
+The system should ensure thread safety and prevent race conditions when multiple threads interact with the elevators.
+
+
+basic idea: use minHeap when moving up
+            use maxHeap when moving down
+            that's all
+
+
+
+code:
+import java.util.PriorityQueue;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.HashMap;
+import java.util.Map;
+
+// Elevator Entity
+class Elevator {
+    int id;
+    int dir = 0; // 1=up, -1=down, 0=idle
+    int capacity;
+    int load = 0;
+    int currentFloor = 0;
+    PriorityQueue<Request> upQueue = new PriorityQueue<>((a,b)->a.floor - b.floor);
+    PriorityQueue<Request> downQueue = new PriorityQueue<>((a,b)->b.floor - a.floor);
+    ReentrantLock lock = new ReentrantLock(); // for thread safety
+
+    public Elevator(int id, int capacity) {
+        this.id = id;
+        this.capacity = capacity;
+    }
+
+    static class Request {
+        int floor;
+        int peopleEnter;
+        public Request(int floor, int peopleEnter) { this.floor = floor; this.peopleEnter = peopleEnter; }
+    }
+}
+
+// Elevator Manager (Singleton)
+class ElevatorManager {
+    private static ElevatorManager instance = null;
+    Map<Integer, Elevator> elevators = new HashMap<>(); // id -> Elevator
+
+    private ElevatorManager() {}
+    public static ElevatorManager getInstance() {
+        if (instance == null) {
+            synchronized (ElevatorManager.class) {
+                if (instance == null) instance = new ElevatorManager();
+            }
+        }
+        return instance;
+    }
+
+    public void addElevator(Elevator elevator) { elevators.put(elevator.id, elevator); }
+
+    public void requestElevator(int floor, int people) {
+        Elevator selected = null;
+        int minDistance = Integer.MAX_VALUE;
+
+        for (Elevator elv : elevators.values()) {
+            elv.lock.lock();
+            try {
+                int distance = Math.abs(elv.currentFloor - floor);
+                if ((elv.dir == 0 || (elv.dir == 1 && floor >= elv.currentFloor)
+                    || (elv.dir == -1 && floor <= elv.currentFloor)) && distance < minDistance) {
+                    selected = elv;
+                    minDistance = distance;
+                }
+            } finally { elv.lock.unlock(); }
+        }
+
+        if (selected != null) {
+            selected.lock.lock();
+            try {
+                if (floor > selected.currentFloor) selected.upQueue.add(new Elevator.Request(floor, people));
+                else selected.downQueue.add(new Elevator.Request(floor, people));
+            } finally { selected.lock.unlock(); }
+        }
+    }
+
+    // Move elevator one step
+    public void move(Elevator elv) {
+        elv.lock.lock();
+        try {
+            if (elv.upQueue.isEmpty() && elv.downQueue.isEmpty()) { elv.dir = 0; return; }
+            if (elv.dir == 0) elv.dir = !elv.upQueue.isEmpty() ? 1 : -1;
+            elv.currentFloor += elv.dir;
+
+            if (elv.dir == 1 && !elv.upQueue.isEmpty() && elv.upQueue.peek().floor == elv.currentFloor) {
+                Elevator.Request req = elv.upQueue.poll();
+                if (elv.load + req.peopleEnter > elv.capacity) throw new RuntimeException("Capacity exceeded!");
+                elv.load += req.peopleEnter;
+                System.out.println("Elevator " + elv.id + " picked " + req.peopleEnter + " at floor " + elv.currentFloor);
+            }
+            if (elv.dir == -1 && !elv.downQueue.isEmpty() && elv.downQueue.peek().floor == elv.currentFloor) {
+                Elevator.Request req = elv.downQueue.poll();
+                if (elv.load + req.peopleEnter > elv.capacity) throw new RuntimeException("Capacity exceeded!");
+                elv.load += req.peopleEnter;
+                System.out.println("Elevator " + elv.id + " picked " + req.peopleEnter + " at floor " + elv.currentFloor);
+            }
+            if (elv.upQueue.isEmpty() && elv.downQueue.isEmpty()) elv.dir = 0;
+        } finally { elv.lock.unlock(); }
+    }
+}
+
+// Demo
+public class Main {
+    public static void main(String[] args) {
+        ElevatorManager manager = ElevatorManager.getInstance();
+        Elevator e1 = new Elevator(1, 5);
+        Elevator e2 = new Elevator(2, 4);
+        manager.addElevator(e1); manager.addElevator(e2);
+
+        manager.requestElevator(3, 2); // 2 people at floor 3
+        manager.requestElevator(5, 1); // 1 person at floor 5
+
+        // Simulate elevator movement
+        for (int i=0;i<10;i++) {
+            for (Elevator elv : manager.elevators.values()) {
+                try { manager.move(elv); } 
+                catch (RuntimeException ex) { System.out.println(ex.getMessage()); }
+            }
+        }
+    }
+}
 
