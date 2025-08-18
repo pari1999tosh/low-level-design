@@ -1,1 +1,343 @@
+The Cricinfo system should provide information about cricket matches, teams, players, and live scores.
+Users should be able to view the schedule of upcoming matches and the results of completed matches.
+The system should allow users to search for specific matches, teams, or players.
+Users should be able to view detailed information about a particular match, including the scorecard, commentary, and statistics.
+The system should support real-time updates of live scores and match information.
+The system should handle concurrent access to match data and ensure data consistency.
+The system should be scalable and able to handle a large volume of user requests.
+The system should be extensible to accommodate new features and enhancements in the future.
 
+entity classes:
+ - User
+ - Subscription
+ - Team
+ - Player
+ - Match
+ - ScoreCard
+service functions:
+ - registerUser(user) – Register a new user in the system.
+ - subscribeToMatchEvent(userId, matchId, eventTypes, language) – Subscribe a user to specific match events.
+ - unsubscribeFromMatchEvent(userId, matchId, eventTypes) – Unsubscribe a user from specific match events.
+ - seeUpcomingMatches() – List all upcoming matches.
+ - viewResultOfMatch(matchId) – View final score, commentary, and stats of a completed match.
+ - searchMatch(criteria) – Search for a match based on teams, players, or other criteria.
+ - getTeamDetail(teamId) – Retrieve detailed information about a team.
+ - getPlayerDetail(playerId) – Retrieve detailed information about a player.
+ - updateLiveScore(matchId, scoreCard) – Update the live score of a match.
+ - streamBallCommentary(matchId, commentaryText, eventType) – Stream ball-by-ball commentary to subscribers.
+ - notifyObservers(matchId, eventType, data) – Notify subscribed users about a match event.
+
+
+flow diagram:
+          +----------------+
+          |      User      |
+          +----------------+
+          | userId         |
+          | name           |
+          +----------------+
+                  |
+                  | subscribes to match events
+                  v
+          +----------------+
+          |   Subscription |
+          +----------------+
+          | matchId        |
+          | eventTypes     |
+          | language       |
+          +----------------+
+                  |
+                  v
+          +----------------+
+          |     Match      |<---------------------+
+          +----------------+                      |
+          | matchId        |                      |
+          | teamA, teamB   |                      |
+          | scoreCard      |                      |
+          | globalCommentary|                     |
+          | notificationStrategy|                 |
+          +----------------+                      |
+                  |                              |
+   event occurs   | triggerEvent(event)          |
+   (ball/wicket)  v                              |
+          +--------------------------+          |
+          | NotificationStrategy     |          |
+          +--------------------------+          |
+          | decideWhichEventsToNotify|          |
+          +--------------------------+          |
+                  |                              |
+                  v                              |
+          +--------------------------+          |
+          | LiveScoreService         | (Singleton)
+          +--------------------------+          |
+          | updateLiveScore()        |          |
+          | streamBallCommentary()   |          |
+          | notifyObservers()        |          |
+          +--------------------------+          |
+                  |                              |
+      +-----------+-----------+                  |
+      |                       |                  |
+      v                       v                  |
+  Subscribers receive     globalCommentary     |
+  event notifications     updated (append)     |
+  (ball/wicket/last ball) |                  |
+                          +------------------+
+                          | Persist after match ends
+                          +------------------+
+
+
+
+Java code:
+import java.util.*;
+
+// ---------- Observer ----------
+interface Observer {
+    void update(Match match, String eventData);
+}
+
+// ---------- Entity Classes ----------
+class User implements Observer {
+    int userId;
+    String name;
+    String email;
+
+    public User(int id, String name, String email) {
+        this.userId = id;
+        this.name = name;
+        this.email = email;
+    }
+
+    @Override
+    public void update(Match match, String eventData) {
+        System.out.println("User " + name + " notified for match " + match.matchId + ": " + eventData);
+    }
+}
+
+class Subscription {
+    int userId;
+    int matchId;
+    List<String> eventTypes;
+    String language;
+
+    public Subscription(int userId, int matchId, List<String> eventTypes, String language) {
+        this.userId = userId;
+        this.matchId = matchId;
+        this.eventTypes = eventTypes;
+        this.language = language;
+    }
+}
+
+class Team {
+    int teamId;
+    String teamName;
+    List<Player> players;
+
+    public Team(int id, String name, List<Player> players) {
+        this.teamId = id;
+        this.teamName = name;
+        this.players = players;
+    }
+}
+
+class Player {
+    int playerId;
+    String name;
+    String role;
+    int runs;
+    int ballsFaced;
+    int wicketsTaken;
+    int oversBowled;
+
+    public Player(int id, String name, String role) {
+        this.playerId = id;
+        this.name = name;
+        this.role = role;
+    }
+}
+
+class ScoreCard {
+    int inningNumber;
+    int runs;
+    int wickets;
+    double overs;
+    Map<Player, String> playerStats = new HashMap<>();
+}
+
+// ---------- Strategy Pattern ----------
+interface NotificationStrategy {
+    void notifySubscribers(Match match, String eventType, String eventData);
+}
+
+class ODINotificationStrategy implements NotificationStrategy {
+    public void notifySubscribers(Match match, String eventType, String eventData) {
+        if(eventType.equals("WICKET") || eventType.equals("LAST_BALL")) {
+            match.notifyObservers(eventType, eventData);
+        }
+    }
+}
+
+class T20NotificationStrategy implements NotificationStrategy {
+    public void notifySubscribers(Match match, String eventType, String eventData) {
+        if(Arrays.asList("BALL","WICKET","BOUNDARY").contains(eventType)) {
+            match.notifyObservers(eventType, eventData);
+        }
+    }
+}
+
+class TestNotificationStrategy implements NotificationStrategy {
+    public void notifySubscribers(Match match, String eventType, String eventData) {
+        if(eventType.equals("WICKET")) {
+            match.notifyObservers(eventType, eventData);
+        }
+    }
+}
+
+// ---------- Match ----------
+class Match {
+    int matchId;
+    Team teamA;
+    Team teamB;
+    String status; // upcoming, live, completed
+    ScoreCard scoreCard;
+    StringBuilder globalCommentary = new StringBuilder();
+    NotificationStrategy notificationStrategy;
+    private List<Observer> observers = new ArrayList<>();
+
+    public Match(int matchId, Team a, Team b, NotificationStrategy strategy) {
+        this.matchId = matchId;
+        this.teamA = a;
+        this.teamB = b;
+        this.notificationStrategy = strategy;
+        this.scoreCard = new ScoreCard();
+    }
+
+    public void addObserver(Observer user) { observers.add(user); }
+    public void removeObserver(Observer user) { observers.remove(user); }
+
+    public void triggerEvent(String eventType, String eventData) {
+        // Append commentary for ball/wicket/boundary
+        if(eventType.equals("BALL") || eventType.equals("WICKET") || eventType.equals("BOUNDARY")) {
+            globalCommentary.append(eventData).append("\n");
+        }
+
+        // Notify subscribers using strategy
+        notificationStrategy.notifySubscribers(this, eventType, eventData);
+    }
+
+    public void notifyObservers(String eventType, String eventData) {
+        for(Observer obs : observers) {
+            obs.update(this, eventType + ": " + eventData);
+        }
+    }
+
+    // ---------- New Functions ----------
+
+    public void viewLiveScore() {
+        System.out.println("Live Score for Match " + matchId + ": " +
+                scoreCard.runs + "/" + scoreCard.wickets + " in " + scoreCard.overs + " overs");
+    }
+
+    public void viewMatchResult() {
+        System.out.println("Final Score for Match " + matchId + ": " +
+                scoreCard.runs + "/" + scoreCard.wickets + " in " + scoreCard.overs + " overs");
+        System.out.println("Global Commentary:\n" + globalCommentary);
+    }
+
+    public void viewMatchStats() {
+        System.out.println("Player Stats for Match " + matchId + ":");
+        for(Map.Entry<Player, String> entry : scoreCard.playerStats.entrySet()) {
+            Player p = entry.getKey();
+            System.out.println(p.name + " - " + entry.getValue());
+        }
+    }
+}
+
+// ---------- Singleton LiveScoreService ----------
+class LiveScoreService {
+    private static LiveScoreService instance = null;
+
+    private LiveScoreService() {}
+
+    public static LiveScoreService getInstance() {
+        if(instance == null) instance = new LiveScoreService();
+        return instance;
+    }
+
+    public void updateLiveScore(Match match, String eventType, String eventData,
+                                int runs, int wickets, double overs, Player player) {
+        // Update ScoreCard
+        match.scoreCard.runs += runs;
+        match.scoreCard.wickets += wickets;
+        match.scoreCard.overs = overs;
+
+        // Update Player Stats
+        if(player != null) {
+            if(eventType.equals("BALL") || eventType.equals("BOUNDARY")) {
+                player.runs += runs;
+                player.ballsFaced += 1;
+            } else if(eventType.equals("WICKET")) {
+                player.wicketsTaken += 1;
+            }
+            match.scoreCard.playerStats.put(player,
+                    "Runs: " + player.runs + ", Balls: " + player.ballsFaced +
+                    ", Wickets: " + player.wicketsTaken + ", Overs: " + player.oversBowled);
+        }
+
+        // Trigger notifications
+        match.triggerEvent(eventType, eventData);
+    }
+}
+
+// ---------- Factory ----------
+class MatchFactory {
+    public static Match createMatch(String type, int matchId, Team a, Team b) {
+        NotificationStrategy strategy;
+        switch(type) {
+            case "ODI": strategy = new ODINotificationStrategy(); break;
+            case "T20": strategy = new T20NotificationStrategy(); break;
+            case "TEST": strategy = new TestNotificationStrategy(); break;
+            default: strategy = new ODINotificationStrategy();
+        }
+        return new Match(matchId, a, b, strategy);
+    }
+}
+
+class EventFactory {
+    public static String createEvent(String eventType, String detail) {
+        return eventType + ": " + detail;
+    }
+}
+
+// ---------- Example Usage ----------
+class CricinfoSystem {
+    public static void main(String[] args) {
+        Player batsman1 = new Player(1, "Batsman X", "Batsman");
+        Player bowler1 = new Player(2, "Bowler A", "Bowler");
+
+        Team india = new Team(1, "India", Arrays.asList(batsman1));
+        Team australia = new Team(2, "Australia", Arrays.asList(bowler1));
+
+        Match match = MatchFactory.createMatch("ODI", 101, india, australia);
+
+        User u1 = new User(1, "Alice", "alice@mail.com");
+        User u2 = new User(2, "Bob", "bob@mail.com");
+
+        match.addObserver(u1);
+        match.addObserver(u2);
+
+        LiveScoreService service = LiveScoreService.getInstance();
+
+        // Simulate ball-by-ball
+        service.updateLiveScore(match, "BALL", "0.1: Bowler A to Batsman X, 1 run", 1, 0, 0.1, batsman1);
+        service.updateLiveScore(match, "BALL", "0.2: Bowler A to Batsman X, 4 runs", 4, 0, 0.2, batsman1);
+        service.updateLiveScore(match, "WICKET", "0.3: Batsman X is out!", 0, 1, 0.3, batsman1);
+
+        // View live score
+        match.viewLiveScore();
+
+        // View player stats
+        match.viewMatchStats();
+
+        // After match ends
+        match.viewMatchResult();
+    }
+}
