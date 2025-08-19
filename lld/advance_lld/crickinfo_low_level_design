@@ -277,7 +277,7 @@ class LiveScoreService {
             } else if(eventType.equals("WICKET")) {
                 player.wicketsTaken += 1;
             }
-            match.scoreCard.playerStats.put(player,
+            match.scoreCard.playerStats.putIfAbsent(player,
                     "Runs: " + player.runs + ", Balls: " + player.ballsFaced +
                     ", Wickets: " + player.wicketsTaken + ", Overs: " + player.oversBowled);
         }
@@ -301,6 +301,8 @@ class MatchFactory {
     }
 }
 
+
+
 class EventFactory {
     public static String createEvent(String eventType, String detail) {
         return eventType + ": " + detail;
@@ -310,16 +312,16 @@ class EventFactory {
 // ---------- Example Usage ----------
 class CricinfoSystem {
     public static void main(String[] args) {
-        Player batsman1 = new Player(1, "Batsman X", "Batsman");
-        Player bowler1 = new Player(2, "Bowler A", "Bowler");
+        Player Virat = new Player(1, "Batsman X", "Batsman");
+        Player Akhtar = new Player(2, "Bowler A", "Bowler");
 
         Team india = new Team(1, "India", Arrays.asList(batsman1));
-        Team australia = new Team(2, "Australia", Arrays.asList(bowler1));
+        Team australia = new Team(2, "Pakistan", Arrays.asList(bowler1));
 
         Match match = MatchFactory.createMatch("ODI", 101, india, australia);
 
-        User u1 = new User(1, "Alice", "alice@mail.com");
-        User u2 = new User(2, "Bob", "bob@mail.com");
+        User u1 = new User(1, "Alice", "Modiji@mail.com");
+        User u2 = new User(2, "Bob", "Musharraf@mail.com");
 
         match.addObserver(u1);
         match.addObserver(u2);
@@ -327,9 +329,9 @@ class CricinfoSystem {
         LiveScoreService service = LiveScoreService.getInstance();
 
         // Simulate ball-by-ball
-        service.updateLiveScore(match, "BALL", "0.1: Bowler A to Batsman X, 1 run", 1, 0, 0.1, batsman1);
-        service.updateLiveScore(match, "BALL", "0.2: Bowler A to Batsman X, 4 runs", 4, 0, 0.2, batsman1);
-        service.updateLiveScore(match, "WICKET", "0.3: Batsman X is out!", 0, 1, 0.3, batsman1);
+        service.updateLiveScore(match, "BOUNDAR", "0.1: Bowler Akhtar to Batsman Vira, 6 run", 6, 0, 0.1,Viray);
+        service.updateLiveScore(match, "BOUNDARY", "0.2: Bowler Akhtar to Batsman Virat, 6 runs", 6, 0, 0.2, Virat);
+        service.updateLiveScore(match, "WICKET", "0.3: Batsman Virat is out!", 0, 1, 0.3, Akhtar);
 
         // View live score
         match.viewLiveScore();
