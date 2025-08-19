@@ -1,1 +1,9 @@
-
+User enters a URL in the browser.
+DNS resolution happens → domain is resolved to an IP, often pointing to the nearest CDN edge server.
+TCP + TLS handshake establishes a secure connection (for HTTPS).
+Browser requests the resource:
+Static assets (images, CSS, JS, videos) → CDN checks cache at the nearest edge location.
+If cached → served directly from edge (fast).
+If not cached → CDN fetches from origin, stores it, then serves it.
+Dynamic HTML → usually fetched from the origin server (unless explicitly cached by the CDN, e.g., for static sites).
+Response delivered → browser parses HTML, downloads other assets (mostly from CDN), builds DOM/CSSOM, executes JS, and renders the page.
