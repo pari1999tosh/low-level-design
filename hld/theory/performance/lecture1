@@ -1,1 +1,14 @@
+what is performance?
+1.measure of how fast the system is if we keep below paremeter constants:
+ 1. workload.
+     -> amount of backend data
+     ->Request volume.
+ 2.Hardware assigned to system:
+   RAM
+   CPU
+   Memory
 
+Goal is to design a system whose:
+->performace does not severely degrade when workload is increases.
+->performance should increase if we give superior hardware.
+  
