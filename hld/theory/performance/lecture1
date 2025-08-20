@@ -35,4 +35,11 @@ Efficiency: how efficient a single request is proceesed by system.(suppose you h
 
 Concurrency: how efficiently the operating system process multiple request present in the system at same time.
              when one request occupied all resources, other request won't get it and quieing will happeb
+
+Latency vs throughput:
+Latency: wait time + process time of a request.
+throughput: how many request the system can process in a given time.
+if latency is less, throughput will be more.
+
+tail latency is an indication of queuing in system, 
   
