@@ -11,4 +11,25 @@ what is performance?
 Goal is to design a system whose:
 ->performace does not severely degrade when workload is increases.
 ->performance should increase if we give superior hardware.
+
+how performance problems occur?
+->when the rate of feeding the request to a system is more than the rate of consumption, these requests are queued up somewhere.
+  reaspns:
+  ->inefficient code.
+  -> serial code execution, ex synchronised keyword in java which allows one thread at a time.
+  -> limited resource capacity.even if u have the capability to execute multiple requests paralelly, but you don't have lot of CPUs.(have the capability to build multiple road
+      but you don't have land space)
+
+principles to ensure high performace:
+1. Efficiency.
+2. Concurrency
+3. capcity
+
+there are single request processing and concurrent request processing.
+
+Efficiency: how efficient a single request is proceesed by system.(suppose you have a CPU which has enough capacity to process this request), 
+            does our algorithm utilises these resources efficiently.
+            DB queries should be utilising as less resources as possible.
+            DB design should be efficient, use of proper data structures.(indexing etc)
+            resources efficiently.
   
