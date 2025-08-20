@@ -94,5 +94,41 @@ Writes become slower because, after writing the row to disk, the database must a
 
 
 subqueries are slower than joins.
+
+CPU latency:
+it happens due to context switching:
+suppose mulitple threads are inside your system.right now thread 1 is in the memory and CPU is assigned to it.
+suppose thread1 goes for some I/O operation it no longer needs CPU, now this process is evicted from memory and stored in process control block.and 
+thread2 is loaded in memory and cpu is assigned to it.this eviction and loading of new process in memory takes some time.
+
+methods to avoid :
+batch I/O:thread will not start processing I/O immediately , it will push the I/O into a queue and then process the batch together,
+so no of context switch will decrease.
+for I/O intensive tasks, go for Node.js. for CPU intensive task, go for single thread.
+
+Multi-threaded scheduling (classic OS, multiple threads)
+
+Policeman = CPU core
+
+Road = thread
+
+If one road is blocked (I/O wait), the policeman leaves and goes to another road.
+
+This is how the OS does context switching to keep CPUs busy.
+
+🔹 Event loop (async I/O, single-threaded model like Node.js)
+
+Only 1 policeman, 1 active road (the main loop).
+
+When a car (task) gets blocked at a railway crossing (I/O), the policeman doesn’t walk away.
+
+Instead, he keeps letting cars from other roads merge into this one road (tasks queued in the event loop).
+
+Meanwhile, a railway signal system (the event loop’s I/O watcher) keeps checking: “Is the crossing open yet?”
+
+When it opens, the waiting cars from that blocked road are allowed back into the flow.
+
+
+virtualisation call also reduce cpu latency, how?
  
   
