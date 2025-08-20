@@ -69,5 +69,21 @@ compute over storage:
 the lesser the data in disk, the lesser will be loaded in memmory.
 normalisation is a means to avoid duplicate data, a way to store as much info as possible in as less disk space as possible.
 data can be computer using queries at run time, we should never store it.
+
+Disk Latency:
+whenever we write data on disk, context switching happens. which adds to disk latency.
+ex: logging, having multiple console.log statements slows down the app a lot because of context switching,
+
+asynchronous logging:main thread instead of logging himself and waiting till logging is complete and letting cpu in idle state,
+it put's these logging into a queue, which is picked up by seperate thread. so our CPU is never idle,downside is if the app crashes.
+some of the logging statement might miss leading to info lost.
+
+reverse proxy can be used to cache data, mostly NGNIX does it.
+
+
+denormalisation vs normalisation:
+1. when application is write heavy, ensure data in normalised because more info we can save in less space, so when we want to perform
+writes, less data will be loaded in database buffer memory, contrary to that. if the database buffer memory is big and aplication is read
+heavy, go for denormalisation because lesser joins means faster lookups.
  
   
