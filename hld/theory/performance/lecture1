@@ -55,4 +55,7 @@ Memory access latency:
  1. every process in the app requires some memory, when the memeory is about to go out of bound, garbage collectors run very aggressively,
     this leads to lot of latency because GC algorithms blocks all the threads to clean up memory.
  2. if we assign too much heap memory, then also GC algotihm will take too much time to sweep through big area.
+ 3. database buffer memory, while performing write operations, data is first fetched from disk into database buffer memory and the change
+    happens there, then this new changed data is again written back to disk. so if the buffer memory is small, memory access 
+latency will come.
   
