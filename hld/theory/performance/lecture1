@@ -130,5 +130,9 @@ When it opens, the waiting cars from that blocked road are allowed back into the
 
 
 virtualisation call also reduce cpu latency, how?
+
+
+Amdahl's law: it predicts the max oncurrency our system can have based on the single portion %, single portion occurs in any system
+               because of locks etc.
  
   
