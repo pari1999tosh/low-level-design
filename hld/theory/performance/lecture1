@@ -138,5 +138,19 @@ Gunther's scalability law: along with queing which Amdahl's law deals with, it a
               ex: if we have a volatile variable , it's value will be same across all threads, so when one thread modifies it,
                  the value has to be replicated into other threads processes, which leads to delay.(so no of request a system can
                 process in given time decreases, hence throughput decreases).
+
+contention in system(leading to queue):
+1. CPU/DISK/Network latency:
+    Disk: use RAID disk because they are sequential array of disk where your data is replicated in multiple positions,
+          so mulitple threads if want to access same data on disk, it will be faster.for CPU vertical scaling can be done
+    Threadpool size: if the threads are too much, lot of request will be assigned to system. but they won't be able to process
+    because threads will wait for CPU .
+    if the size is very less, they will go inside listen queue.
+
+Minimizing lock contention:
+1. reduce the duration of locks by removing unwanted code out of synchronized block.
+2. Lock striping: concurrent hashmap, divide a big data structure into small units, take locks only on those units.
+3. insteaf of having global lock for both reads/writes. use Read/Write Locks, Read locks means no writer can write while
+   read lock is there though other read lock can happen, write lock means no reader can read when data is being written.
  
   
