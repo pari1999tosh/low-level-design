@@ -58,4 +58,10 @@ Memory access latency:
  3. database buffer memory, while performing write operations, data is first fetched from disk into database buffer memory and the change
     happens there, then this new changed data is again written back to disk. so if the buffer memory is small, memory access 
 latency will come.
+
+problem of memory bloat:
+ code base should be small.(each instruction leads toc ontext switch between RAM and processor).
+ weak references, java has this concept where if memory is running short, GC can remove objects, and weakly referred objects are first
+ checked if they really exist or not, this check is responsibility of program code.
+ 
   
