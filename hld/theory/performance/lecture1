@@ -85,5 +85,14 @@ denormalisation vs normalisation:
 1. when application is write heavy, ensure data in normalised because more info we can save in less space, so when we want to perform
 writes, less data will be loaded in database buffer memory, contrary to that. if the database buffer memory is big and aplication is read
 heavy, go for denormalisation because lesser joins means faster lookups.
+
+In a database, table data is written to disk pages (which may not be sequential). An index (e.g., a B+Tree) stores pointers to those disk locations.
+
+Reads become faster because the index lets the DB jump directly to the right disk page instead of scanning the whole table.
+
+Writes become slower because, after writing the row to disk, the database must also update the index structure with the new row’s location (and potentially rebalance the tree).
+
+
+subqueries are slower than joins.
  
   
