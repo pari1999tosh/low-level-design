@@ -63,5 +63,11 @@ problem of memory bloat:
  code base should be small.(each instruction leads toc ontext switch between RAM and processor).
  weak references, java has this concept where if memory is running short, GC can remove objects, and weakly referred objects are first
  checked if they really exist or not, this check is responsibility of program code.
+
+
+compute over storage:
+the lesser the data in disk, the lesser will be loaded in memmory.
+normalisation is a means to avoid duplicate data, a way to store as much info as possible in as less disk space as possible.
+data can be computer using queries at run time, we should never store it.
  
   
