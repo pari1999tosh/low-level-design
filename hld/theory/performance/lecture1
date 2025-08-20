@@ -133,6 +133,10 @@ virtualisation call also reduce cpu latency, how?
 
 
 Amdahl's law: it predicts the max oncurrency our system can have based on the single portion %, single portion occurs in any system
-               because of locks etc.
+               because of locks etc. even if we put infinite processors, the concurrency can't go beyond this level.
+Gunther's scalability law: along with queing which Amdahl's law deals with, it also takes into account Gunther's law.
+              ex: if we have a volatile variable , it's value will be same across all threads, so when one thread modifies it,
+                 the value has to be replicated into other threads processes, which leads to delay.(so no of request a system can
+                process in given time decreases, hence throughput decreases).
  
   
