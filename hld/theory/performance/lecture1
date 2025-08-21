@@ -190,7 +190,7 @@ Dead locks:
           suppose these two accounts have a id, sort them. and take locks always as per the global order.even if you are transferring
           money from y->x, lock will be taken in sorted order.
 
-2. Load based deadlocks: see in video
+2. Load based deadlocks: see in video(it's an interview question)
    solutions: different services should have different gateways, so that connection pool size is decided based on expected load
               on individual services.
 
