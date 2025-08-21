@@ -152,5 +152,22 @@ Minimizing lock contention:
 2. Lock striping: concurrent hashmap, divide a big data structure into small units, take locks only on those units.
 3. insteaf of having global lock for both reads/writes. use Read/Write Locks, Read locks means no writer can write while
    read lock is there though other read lock can happen, write lock means no reader can read when data is being written.
+
+
+optimistic vs pessimistic locks:
+1.pessimist lock:take the locks at the time of reading the data.
+2.it must be used when contention is high.
+   take lock-> fetch data -> process data -> update data -> commit transaction -> remove lock
+
+optimistic locking:
+ 1. fetch data -> process data -> take lock -> update data -> commit transaction -> remove lock
+
+when the proportion of threads that updated the data after doing some processing based on data they read is high:
+there will be too many retry for various threads, so in such case use pessimistic locks
+ex: image of a product is awsome and price is very low, lot of people will click on the card to see more details,
+    but suppose the quality of fabric is low, customer reviews are bad etc, very few will actuall buy the product
+    in such case, you can use optimistic locking so very less retries will be there.
+    but if fabric is good,reviews are good most of the people who clicked on the card to see details will
+    buy the item and update the quantity, so use pessimistic locking there.
  
   
