@@ -169,5 +169,30 @@ ex: image of a product is awsome and price is very low, lot of people will click
     in such case, you can use optimistic locking so very less retries will be there.
     but if fabric is good,reviews are good most of the people who clicked on the card to see details will
     buy the item and update the quantity, so use pessimistic locking there.
+
+    usually, if contention is high, chances of mofification is also high, so use pessimistic locking.
+
+
+Dead locks:
+ 1. ordering related dead locks:
+   -: you have two account x and y, thread 1 is transferring money from x -> y, thread 2 is transferring money from y -> x.
+   -: suppose they initiate transaction at the same time, none of them will be able to complete transaction because :
+      thread 1:
+       -> take lock on x,deduct money
+       -> before tranferring money, take lock on y,
+      thread 2:
+       ->take lock on y, deduct money.
+       -> before transferring money, take lock on x.
+
+   none of the threads will be able to complete transaction because while transferring money, lock has been taken by other thread.
+
+ solution: ensure a global order of locking:
+          suppose these two accounts have a id, sort them. and take locks always as per the global order.even if you are transferring
+          money from y->x, lock will be taken in sorted order.
+
+
+
+
+
  
   
