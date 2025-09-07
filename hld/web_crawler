@@ -1,0 +1,80 @@
+web crawler important pointer:
+lot of I/o calls such as DNS lookups, http request etc so go with node.js
+functional requirements:
+10B webpages
+2mB each web page
+5 days to scrape
+
+Non-functional:
+Fault Taularent
+Politeness (each website will have it's robot.txt which says how often a system can be crawled) to avoid DDOS.
+scale to 10B web page
+
+Core entities:
+Text data after crawl.
+Url meta data
+Domain meta data (robot.txt)
+
+APIs:
+ an API to input seed urls
+an api to fetch the crawled txt data
+
+Data flow:
+we have a data structure in which we put the seed urls, it is called as frontier.
+we request the IP of those from DNS.
+ssl handshake and then fetch the html
+store the text of html into database/objectstore
+parse the text and fetch the links inside it and add them to frontier
+repeat above steps recursively.
+﻿
+﻿high level design starts at 15:00
+﻿
+﻿pointers: 
+   minimize the size of the message queue like kafkaesque as much as possible, default is 2mb.
+webpages might need retry, so we need exponential backoff, for that we need states, if we keep state in
+crawler service, and if crawler instance goes down we will loose the state
+﻿ - option 1 is to have shared cache
+          option 2 is to not store state in crawler but calculate and put it back to frontier queue and use kafkaesque for frontier so kafkaesque will persist this state
+calculate the next time epoch when we want to retry in crwler nad put that time in kafkaesque, so it’s not like whenever a message is pulled, crawler instance has to wait for 3 minutes/5minutes from then. the exact time at which retyr will happen will be in kafkaesque, so instance doesnt have to wait. while waiting if it goes down, other instance will again fetch and wait and it might go down again. this might lead to infinite loop, in later, even if one instance goes down, suppose after waiting for 2.5 minutes, next instance will have to wait for 30 secs only
+
+above is wonderful but little bit of a mess, so we can use SQS as frontier queue because it has default configurable exponential backoff, so crawler just needs to tell the SQS that message has not been successful, SQS will keep this
+message hidden till the next exponential time of retry.
+
+one crawler instance will pull off a message and do the processing, after that it commits to queue that the message is processed so that other instances won’t be able to process it again, fo that all crawler instance must be part of same
+consumer group.
+
+Fault taulerence is handled in above way, now we will move to politeness.
+
+every web server has robot.txt file that sets the rule about who can crawl this beside,it looks something like this:
+
+     Robot.txt
+User-agent: * //this means anyone can crawl it
+Disallow: /private it means the webpages with /private paths can’t be processed.
+Crawl-delay: 10s //to avoid DDOS attacks
+
+Each time we crawl a domain, we will have to note down that time and the robot.txt info so that next time when we crawl
+we will know whether we have waited enough or not. fo that we can use a database table
+
+although we are storing last crawl time to avoid recrawling the same domain multiple times within time frame,but multiple instances of crawler can hit same domain at the same time after crawl delay, so we need rate limiter too.now suppose due to rate limiiter, we don’t process these messages and put them back to frontier queue, they all might be fetched again at same time so again they will be rate limitted, so we add random timestamp which is called jittering for visibility of message
+
+
+now there is another problem﻿, if after parsing a webpage we put all the urls directly into frontier queue, they will probably be of same domain. in that case they all will either be blocked by last crawl time or rate limiter
+hence instead of directly putting them to frontier queue, we put them into url metadata with an extra flag called isCrawled, and we will have a smart scheduler that will fetch isCrawled = false urls and smartly put randomeness in them and then put them in frontier queue.
+
+Also, we can use multiple DNS providers to ditribute load between them, we can also use cache to store resolved IP.
+
+
+now we want to handle two more cases:
+don’t crawl a url that has already been crawled, which is handled in metadata table using isCrawled flag.
+two different urls might have same content, even they might be in different domain and still have same content. 
+
+for case two, we can have hashes of parsed content and store it in either the db or in cache, if we put it in cache we will have to make cache fault taulerant and avaialable by using multiple instances but that would 
+shoot up the latency, again we can decide sync/asynchronous communication between multiple redis instances to have either availability or consistency.
+
+Now since there are 10B URLS, there will be approximately 10B hashes in reds, which will need very big 200gb redis instance. if interviewer puts a constraint on size, we might would proceed with bloom filters which
+is a space optimised probabilistic data structure which might gives false positives, so it might say that hash is already present but actually it is not so we might actuallyy miss some contents . but given 10B URLS,
+that could be justified.
+
+
+last thing we need to handle is crawler traps:
+some webpages in same domain might have millions of links 
