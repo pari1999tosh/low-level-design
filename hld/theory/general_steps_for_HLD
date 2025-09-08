@@ -1,1 +1,13 @@
+1.back of envelope:
+   montly active users, then DAU etc
+   or in case of pipeline questions like web crawler, how much data you need to store.
+
+2. API endpoints
+3. clarifications of system functionality(like conflicts in write or whether to check robot.txt politeness for web crawler)
+4.proceed with basic monolithic architecture without thinking about scaling.
+5.now every architecture has 3 parts, front end layer, services layer, database layer
+usually a questions belongs to one of these layer, ex: crawler is service heavy, book my show is db heavy.
+6.now think about scaling/performance.
+7.discuss tradeoffs
+8.identify single point of failiures
 
