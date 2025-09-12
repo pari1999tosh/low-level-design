@@ -19,3 +19,11 @@ entities:
  - file binary data(raw data)
  - file metadata
  - users
+
+APIs:
+ - POST /files
+    body: file(binary data)
+ - GET /files
+      download the files
+
+ - GET /changes?since={timestamp}, this endpoint is used to know if something has changed
