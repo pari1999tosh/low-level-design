@@ -13,4 +13,4 @@ non functional:
  - low latency uploads and downloads(as low as possible)
  - support large file uploads like 50gb.
  - resume upload functionality should be there.
- - High data integrity.
+ - High data integrity.it's okay if syncing takes some time, but after syncing it should be accurate.
