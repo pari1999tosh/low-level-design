@@ -27,3 +27,7 @@ APIs:
       download the files
 
  - GET /changes?since={timestamp}, this endpoint is used to know if something has changed
+
+
+while downloading a file, we don't download from s3 in the service and then let browser download it from service.
+instead we give presigned s3 url to browser and browser directly downloads it.
