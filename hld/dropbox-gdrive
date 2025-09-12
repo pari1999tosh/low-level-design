@@ -14,3 +14,8 @@ non functional:
  - support large file uploads like 50gb.
  - resume upload functionality should be there.
  - High data integrity.it's okay if syncing takes some time, but after syncing it should be accurate.
+
+entities:
+ - file binary data(raw data)
+ - file metadata
+ - users
