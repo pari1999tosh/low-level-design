@@ -1,1 +1,16 @@
+functional requirement:
+ - upload file
+ - download file
+ - sync file across devices, 
 
+out of scope:
+ - don't design blob storage, use s3- that's a seperate question.
+
+non functional:
+ - availability
+ - consistency
+ - availability > consistency , main purpose of such sevrices is to add arhcitecture diagram, database diagram etc.
+ - low latency uploads and downloads(as low as possible)
+ - support large file uploads like 50gb.
+ - resume upload functionality should be there.
+ - High data integrity.
