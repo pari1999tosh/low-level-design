@@ -55,3 +55,5 @@ after 30:00 video:
 - so instead of directly trusting client, we should verify with s3 whether the chunk is actually uploaded or not.
 - another way to completely remove responsibility from client is to use s3 notifications, so when a chunk upload is done, s3 will 
   inform  the file service and metadata db will update status of the chunk.
+- fingerprinting and status maintenance of each chunk etc can be done via S# multipart API which it exposes, but trust and verify
+  part will be missing because that API doesn't support s3 notifications.
