@@ -63,3 +63,4 @@ working on latency:
  - to reduce download latency, we can use CDN if and only if the use case is that lot of files are popular and people download all
    over the world, or user changes their place very frequently, upload from India but then access from genrmay etc. otherwise
    CDN is overkill.
+ - we can use compression and decompression.
