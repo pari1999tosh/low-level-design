@@ -34,8 +34,13 @@ instead we give presigned s3 url to browser and browser directly downloads it.
 
 
 after 30:00 video:
-main problems in current design:
-API gateways and browser etc has hard limit on payload size of POST request (10 mb), so we can't upload large files.
-so we need a mechanism to directly upload in s3, so we just send metadata of file with mimetype,size etc via API gateway
-and request s3 to give us a presigned URL, now this presigned url is returned to browser and via browser we directly upload file
-presigned URL has digital signature and expirty time.
+ - main problems in current design:
+   API gateways and browser etc has hard limit on payload size of POST request (10 mb), so we can't upload large files.
+  so we need a mechanism to directly upload in s3, so we just send metadata of file with mimetype,size etc via API gateway
+  and request s3 to give us a presigned URL, now this presigned url is returned to browser and via browser we directly upload file
+  presigned URL has digital signature and expirty time.
+
+- it will still take lot of time.if internet connection is lost, we will have to start again. so we do chunking.
+  we will store chunks array in file metadata while uploading,each chunk will have it's own s3 link and id,status
+- in case of resume upload, we get chunks from metadata db and then compare with the chunks in laptop file system and upload only
+  those which are not yet uploaded. for comparition we will use fingerprinting.
