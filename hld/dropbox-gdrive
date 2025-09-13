@@ -44,3 +44,4 @@ after 30:00 video:
   we will store chunks array in file metadata while uploading,each chunk will have it's own s3 link and id,status
 - in case of resume upload, we get chunks from metadata db and then compare with the chunks in laptop file system and upload only
   those which are not yet uploaded. for comparition we will use fingerprinting.
+  we calculate the hash of each chunks bytes and these can be used as unique IDs in file metadata.
