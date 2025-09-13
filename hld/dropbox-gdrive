@@ -48,3 +48,6 @@ after 30:00 video:
   instead of using hash in browser and then send it to file metadata, we could have generated IDs in metadata and store in laptop
   filesystem, but in case when we delete the file from laptop and download again, these ids will be lost, but in case of hash
   the same hash will be generated from the chunks bytes.
+- another problem is , when chunks are started uploading from browser to s3 and the status is updated in db, hacker/stupid user can tweak
+  with browser and hamper the network calls and so inconsistent status he will send for a particular chunk , then he will create
+  problem for engineering team and engineering team doesn't have access to client desktop , it will be very difficult to debug.
