@@ -31,3 +31,8 @@ APIs:
 
 while downloading a file, we don't download from s3 in the service and then let browser download it from service.
 instead we give presigned s3 url to browser and browser directly downloads it.
+
+
+after 30:00 video:
+main problems in current design:
+API gateways and browser etc has hard limit on payload size of POST request (10 mb), so we can't upload large files
