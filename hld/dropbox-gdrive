@@ -35,4 +35,7 @@ instead we give presigned s3 url to browser and browser directly downloads it.
 
 after 30:00 video:
 main problems in current design:
-API gateways and browser etc has hard limit on payload size of POST request (10 mb), so we can't upload large files
+API gateways and browser etc has hard limit on payload size of POST request (10 mb), so we can't upload large files.
+so we need a mechanism to directly upload in s3, so we just send metadata of file with mimetype,size etc via API gateway
+and request s3 to give us a presigned URL, now this presigned url is returned to browser and via browser we directly upload file
+presigned URL has digital signature and expirty time.
