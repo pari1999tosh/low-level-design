@@ -52,3 +52,4 @@ after 30:00 video:
   with browser and hamper the network calls and so inconsistent status he will send for a particular chunk , then he will create
   problem for engineering team and engineering team doesn't have access to client desktop , it will be very difficult to debug.
 - that's why the best practice is to remove responsibilities from client as much as possible.
+- so instead of directly trusting client, we should verify with s3 whether the chunk is actually uploaded or not.
