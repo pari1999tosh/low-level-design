@@ -51,3 +51,4 @@ after 30:00 video:
 - another problem is , when chunks are started uploading from browser to s3 and the status is updated in db, hacker/stupid user can tweak
   with browser and hamper the network calls and so inconsistent status he will send for a particular chunk , then he will create
   problem for engineering team and engineering team doesn't have access to client desktop , it will be very difficult to debug.
+- that's why the best practice is to remove responsibilities from client as much as possible.
