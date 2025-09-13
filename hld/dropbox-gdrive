@@ -57,3 +57,9 @@ after 30:00 video:
   inform  the file service and metadata db will update status of the chunk.
 - fingerprinting and status maintenance of each chunk etc can be done via S# multipart API which it exposes, but trust and verify
   part will be missing because that API doesn't support s3 notifications.
+
+
+working on latency:
+ - to reduce download latency, we can use CDN if and only if the use case is that lot of files are popular and people download all
+   over the world, or user changes their place very frequently, upload from India but then access from genrmay etc. otherwise
+   CDN is overkill.
