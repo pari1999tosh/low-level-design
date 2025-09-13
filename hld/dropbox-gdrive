@@ -53,3 +53,5 @@ after 30:00 video:
   problem for engineering team and engineering team doesn't have access to client desktop , it will be very difficult to debug.
 - that's why the best practice is to remove responsibilities from client as much as possible.
 - so instead of directly trusting client, we should verify with s3 whether the chunk is actually uploaded or not.
+- another way to completely remove responsibility from client is to use s3 notifications, so when a chunk upload is done, s3 will 
+  inform  the file service and metadata db will update status of the chunk.
