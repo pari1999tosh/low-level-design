@@ -1,1 +1,92 @@
+1.concepts:
+system is divided in 3 layers:
+ - client 
+ - service
+ - database
+
+ client layer concepts:
+  - websockets
+  - server sent events
+  - polling(short & long)
+  - security
+     - TLS/SSL certificate
+     - Digital Signatures
+     - hashing, encryption, encoding
+     - DNS, CDN
+
+ Service
+  - When to use microservice
+  - horizontal scaling
+  - stateful services
+  - stateless services
+  - synchronus vs asynchronous communication
+  - thread locks 
+  - deadlocks, techniques to remove deadlocks
+  - write conflicts
+  - read conflicts
+  - some built in components
+     - zookeeper
+     - Message queus such as Kafka, Rabbit MQ, SQS
+     - caching: Redis vs Memcache
+     - Retry strategies: expenential backoff, jittering, retry based deadlocks
+
+Database Layer:
+     - Master-Master & Master-slave configuration.
+     - SQL vs NoSQL
+     - Database Schema Design(Normalisation & denormalisation)
+     - Read Scalability & Write Scalability
+     - Cassandra DB, DynamodDB, key-value based databases, LDAP(recrsive-queries).
+
+
+connection between client-services:
+     - Loadbalancer vs API gateway
+     - TLS termination, Rate limitting, Throttling, various type of routing.
+
+connection between services-database:
+     - Redis.
+     - S3(blob storage).
+
+
+AWS:
+  - Blob storage
+  - key based search(open search).
+  - SQS.
+  - RDS, Dynamo.
+  - SNS.
+
+
+Breakdown:
+  - Performance
+    - Latency
+    - Efficiency
+    - optimistic vs pessimistic locks
+    - deadlocks, race condition
+  - Scalability.
+    - scaling of service layer
+       - stateless service scaling
+       - stateful service scaling
+    - scaling of Databases
+       - Read scalability
+       - Write Scalability
+  - Availability,reliability.
+      - Fault Taulerant system
+      - replication(induce redundancy in system).
+      - Hot standby
+      - warm standby
+      - cold standby
+
+
+general concepts:
+  - Retry mechanisms(exponential backoff , jittering).
+  - denormalisation & normalisation.
+  - monitoring and logging.
+
+
+
+      
+  
+    
+     
+     
+
 
