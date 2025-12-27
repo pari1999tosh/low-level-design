@@ -1,0 +1,521 @@
+/*
+You are tasked with designing and implementing a ride-sharing application where 
+passengers can request rides, and drivers can be matched to them based on 
+proximity. The application should handle different types of vehicles 
+(such as cars, bikes, luxury cars) and support multiple fare calculation strategies. 
+The system must notify both passengers and drivers about ride statuses and 
+calculate the fare based on the type of ride and distance traveled.
+
+
+Enum:
+ - UserType 
+entities:
+    - User 
+        - type (passenger or driver)
+    - Ride
+    Location fromLocation
+    Location toLocation
+    User u 
+    Driver d
+    FareCalculationStrategy FareCalculationStrategy
+
+    - Vehicles classes
+
+    - FareCalculationStrategy classes
+
+Service functions:
+  - RequestRide. -> singleton
+  - matchDriver
+  - notifyRideUsers -> singleton
+
+  */
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.*;
+
+ enum UserType {
+    PASSENGER, DRIVER
+  }
+
+  interface observers {
+    void sendNotification(Ride ride,RideState rideStatus);
+  }
+
+   class User implements observers{
+    
+    private String name;
+    private UserType userType;
+    
+    
+
+    public User(String name, UserType userType) {
+        this.name = name;
+        this.userType = userType;
+        System.out.println("user registered of type: " + userType);
+    }
+    
+    @Override
+    public void sendNotification(Ride ride, RideState rideStatus){
+       System.out.println("rider " + ride.getDriver() + "is with passenger " + ride.getPassenger() + " in " + rideStatus.getName() + "state"); 
+    }
+
+    // getters and setters
+ }
+
+
+   class Location {
+    private String latitude;
+    private String longitude;
+
+    public Location(String latitude, String longitude) {
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
+
+    public String getLatitude(){
+        return latitude;
+    }
+
+    public String getLongitude(){
+        return longitude;
+    }
+
+    public double distanceTo(Location pickupLocation){
+        return Math.sqrt(Math.pow(Double.parseDouble(latitude) - Double.parseDouble(pickupLocation.getLatitude()), 2) + Math.pow(Double.parseDouble(longitude) - Double.parseDouble(pickupLocation.getLongitude()), 2));
+    }
+
+    // getters and setters
+   }
+
+   interface RideState {
+        void next(Ride ride);
+        void cancel(Ride ride);
+        String getName();
+    }
+
+    class RequestedState implements RideState {
+        public void next(Ride ride) { ride.setState(new AcceptedState()); }
+        public void cancel(Ride ride) { ride.setState(new CancelledState()); }
+
+        @Override
+        public String getName() { return "REQUESTED"; }
+    }
+
+    class AcceptedState implements RideState {
+        public void next(Ride ride) { ride.setState(new InProgressState()); }
+        public void cancel(Ride ride) { ride.setState(new CancelledState()); }
+
+        @Override
+        public String getName() { return "ACCEPTED"; }
+    }
+
+    class InProgressState implements RideState {
+        public void next(Ride ride) { ride.setState(new CompletedState()); }
+        public void cancel(Ride ride) {
+            throw new IllegalStateException("Cannot cancel after ride has begun!");
+        }
+
+        @Override
+        public String getName() { return "IN_PROGRESS"; }
+    }
+
+    class CompletedState implements RideState {
+        public void next(Ride ride) {
+            throw new IllegalStateException("Ride already completed.");
+        }
+        public void cancel(Ride ride) {
+            throw new IllegalStateException("Cannot cancel a completed ride!");
+        }
+
+        @Override
+        public String getName() { return "COMPLETED"; }
+    }
+
+    class CancelledState implements RideState {
+        public void next(Ride ride) {
+            throw new IllegalStateException("Ride was cancelled.");
+        }
+        public void cancel(Ride ride) {
+            throw new IllegalStateException("Ride already cancelled.");
+        }
+
+        @Override
+        public String getName() { return "CANCELLED"; }
+    }
+   
+
+  interface observable {
+        public void notifyAllObservers();
+    }
+
+   class Ride implements observable{
+    private static final AtomicInteger idCounter = new AtomicInteger(1);
+    List<observers> observersList = new ArrayList<>();
+    private final String id;
+    private Location fromLocation;
+    private Location toLocation;
+    private User passenger;
+    private User driver;
+    private FareCalculationStrategy fareStrategy;
+    private RideState rideStatus;
+
+    public Ride(FareCalculationStrategy fareStr, Location fromLocation, Location toLocation, User passenger) {
+        this.id = "RIDE+ " + idCounter.getAndIncrement();
+        this.fareStrategy = fareStr;
+        this.fromLocation = fromLocation;
+        this.toLocation = toLocation;
+        this.passenger = passenger;
+        this.rideStatus = new RequestedState();
+    }
+
+    void addObserver(observers obs){
+        System.out.println("line 171, adding observers==========");
+        this.observersList.add(obs);
+    }
+
+    void removeObserver(observers obs){
+        this.observersList.remove(obs);
+    }
+
+    User getPassenger(){
+        return this.passenger;
+    }
+
+    @Override
+    public void notifyAllObservers(){
+        System.out.println("line 184, notifying observers=========");
+     for(observers obs: observersList){
+        System.out.println("sending notification one by one========");
+        obs.sendNotification(this,this.rideStatus);
+     }
+   }
+
+    public void setState(RideState rideState){
+        this.rideStatus =  rideState;
+        notifyAllObservers();
+    }
+
+    public RideState getRideState(){
+        return this.rideStatus;
+    }
+    
+
+    public void assignDriver(User driver) {
+        this.driver = driver;
+    }
+
+    public int calculateFare() {
+        return fareStrategy.calculate(this.fromLocation, this.toLocation);
+    }
+
+    public User getDriver(){
+        return this.driver;
+    }
+
+    // getters and setters...
+  }
+
+
+  interface FareCalculationStrategy {
+    public int calculate(Location fromLocation, Location toLocation);
+    }
+
+   class CarFareStrategy implements FareCalculationStrategy {
+    
+    @Override
+    public int calculate(Location fromLocation, Location toLocation){
+        return 300;
+    }
+  }
+
+
+   class BikeFareStrategy implements FareCalculationStrategy {
+    
+    @Override
+    public int calculate(Location fromLocation, Location toLocation){
+      return 200;
+    }
+  }
+
+
+   class AutoFareStrategy implements FareCalculationStrategy {
+    
+    @Override
+    public int calculate(Location fromLocation, Location toLocation){
+        return 250;
+    }
+  }
+
+  
+
+  enum VehicleStatus {
+    OFFLINE,AVAILABLE,OCCUPIED
+  }
+
+  enum vehicleType {
+    CAR, BIKE, AUTO
+  }
+
+  interface Vehicle {
+    public void assignDriver(User us);
+    public vehicleType getType();
+    public Location getCurrentLocation();
+    public User getDriver();
+    public void addLocation(Location location);
+    public VehicleStatus getStatus();
+  }
+
+   class Car implements Vehicle {
+    String LicensPlate;
+    User u;
+    VehicleStatus vehicleStatus;
+    Location currentLocation;
+    User driver;
+    Car(String lp){
+        this.LicensPlate = lp;
+        this.vehicleStatus = VehicleStatus.AVAILABLE;
+    }
+    
+    @Override
+    public void addLocation(Location location){
+        this.currentLocation = location;
+    }
+
+    @Override
+    public void assignDriver(User us){
+        this.driver = us;
+    }
+    
+    @Override
+    public vehicleType getType(){
+        return vehicleType.CAR;
+    }
+
+    @Override
+    public Location getCurrentLocation(){
+        return this.currentLocation;
+    }
+
+    @Override
+    public User getDriver(){
+        return this.driver;
+    }
+
+    @Override
+    public VehicleStatus getStatus(){
+        return this.vehicleStatus;
+    }
+
+  }
+
+   class Bike implements Vehicle{
+    String LicensPlate;
+    User u;
+    VehicleStatus vehicleStatus;
+    Location currentLocation;
+    User driver;
+    Bike(String lp){
+        this.LicensPlate = lp;
+        this.vehicleStatus = VehicleStatus.AVAILABLE;
+    }
+
+    public void addLocation(Location location){
+        this.currentLocation = location;
+    }
+
+    @Override
+    public void assignDriver(User us){
+        this.driver = us;
+    }
+
+    @Override
+    public vehicleType getType(){
+        return vehicleType.BIKE;
+    }
+
+    @Override
+    public Location getCurrentLocation(){
+        return this.currentLocation;
+    }
+
+    @Override
+    public User getDriver(){
+        return this.driver;
+    }
+
+    @Override
+    public VehicleStatus getStatus(){
+        return this.vehicleStatus;
+    }
+  }
+
+   class Auto implements Vehicle{
+    String LicensPlate;
+    User u;
+    VehicleStatus vehicleStatus;
+    Location currentLocation;
+    User driver;
+    Auto(String lp){
+        this.LicensPlate = lp;
+        this.vehicleStatus = VehicleStatus.AVAILABLE;
+    }
+
+    public void addLocation(Location location){
+        this.currentLocation = location;
+    }
+
+    @Override
+    public void assignDriver(User us){
+        this.driver = us;
+    }
+
+    @Override
+    public vehicleType getType(){
+        return vehicleType.AUTO;
+    }
+
+    @Override
+    public Location getCurrentLocation(){
+        return this.currentLocation;
+    }
+
+    @Override
+    public User getDriver(){
+        return this.driver;
+    }
+
+    @Override
+    public VehicleStatus getStatus(){
+        return vehicleStatus;
+    }
+  }
+
+
+  class RideMatchingFacade {
+
+    private static RideMatchingFacade instance = null;
+
+    private List<User> usersList;
+    private List<Vehicle> vehicles;
+    public List<Ride> ridesList;
+
+    public RideMatchingFacade() {
+        usersList = new ArrayList<>();
+        vehicles = new ArrayList<>();
+        ridesList = new ArrayList<>();
+    }
+    
+    public void addPassenger(User p){
+        this.usersList.add(p);
+    }
+    
+    public void addVehicle(Vehicle d){
+        this.vehicles.add(d);
+    }
+
+    public void addRide(Ride ride){
+        System.out.println("ride is getting added: " + ride);
+        this.ridesList.add(ride);
+    }
+    
+    
+
+    public static RideMatchingFacade getInstance() {
+        if (instance == null) {
+            synchronized (RideMatchingFacade.class) {
+                if (instance == null) {
+                    instance = new RideMatchingFacade();
+                }
+            }
+        }
+        return instance;
+    }
+
+    public static class FareStrategyFactory {
+        public static FareCalculationStrategy createStrategy(vehicleType type) {
+            switch (type) {
+                case CAR: return new CarFareStrategy();
+                case BIKE: return new BikeFareStrategy();
+                case AUTO: return new AutoFareStrategy();
+                default: return null; // or throw exception
+            }
+        }
+    }
+
+    public void changeStatus(Ride ride){
+        ride.getRideState().next(ride);
+    }
+
+    
+    public Ride requestRide(Location fromLocation, Location toLocation, User passenger, vehicleType type) {
+
+        System.out.println("ride request started===");
+        FareCalculationStrategy fareStrategy = FareStrategyFactory.createStrategy(type);
+
+        Ride ride = new Ride(fareStrategy, fromLocation, toLocation, passenger);
+        System.out.println("ride object created====");
+        Vehicle pickedVehicle = null;
+
+        // Matching logic
+        pickedVehicle = vehicles.stream()
+        .filter(v -> v.getType() == type)
+        .filter(v -> v.getStatus() == VehicleStatus.AVAILABLE)
+        .min(Comparator.comparingDouble(v ->
+            v.getCurrentLocation().distanceTo(fromLocation)))
+        .orElse(null);
+        
+        System.out.println("pickedVehicle======line 430");
+
+        if (pickedVehicle == null) {
+            System.out.println("No vehicles available");
+            return null;
+        }
+
+        
+
+        User driver = pickedVehicle.getDriver(); // assuming you add this method
+        System.out.println("ride object is: "+ ride);
+        System.out.println("driver is: " + driver);
+        this.addRide(ride);
+        ride.assignDriver(driver);
+        ride.setState(new AcceptedState());
+        ride.notifyAllObservers();
+
+        return ride;
+    }
+}
+
+
+
+
+
+
+
+
+class Main {
+    public static void main(String[] args) {
+        System.out.println("ride sharing service started, book your ride");
+        User alice = new User("Alice", UserType.PASSENGER);
+        User bob = new User("Bob", UserType.DRIVER);
+        Vehicle bobCar = new Car("UP78GV2753");
+        bobCar.assignDriver(bob);
+        System.out.println("driver of picked vehicle is: " + bobCar.getDriver());
+        bobCar.addLocation(new Location("0.0001001","0.0001101"));
+        RideMatchingFacade rideFacade =  RideMatchingFacade.getInstance();
+        
+        rideFacade.addPassenger(alice);
+        rideFacade.addVehicle(bobCar);
+        
+        System.out.println("requesting ride");
+        Ride ride = rideFacade.requestRide(new Location("0.000111", "0.00101001"), new Location("0.001010", "0.001010"), alice,vehicleType.CAR);
+        
+        ride.addObserver(alice);
+        ride.addObserver(bob);
+
+        System.out.println("changing status");
+        System.out.println(ride.getRideState().getName());
+        rideFacade.changeStatus(ride);
+        System.out.println(ride.getRideState().getName());
+        rideFacade.changeStatus(ride);
+        System.out.println(ride.getRideState().getName());
+    }
+}
