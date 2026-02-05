@@ -28,4 +28,4 @@ service functions:
  - do the payment and get a ticket
 
 think about design patterns: 
- - 
+ - singleton for 
