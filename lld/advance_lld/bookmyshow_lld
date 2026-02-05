@@ -1,1 +1,31 @@
+Requirements: 
 
+if u haven't seen a system, you can have a rough flow of the system, 
+make sure you don't waste too much time here and just select 5-7 steps.
+
+ - User selects a city and see list of movies, 
+ - then selects a movie and see lists of theatre then he clicks a theatre and see show timings, 
+ - then he clicks on show timings and see the seatmap. 
+ - in the seat map he can select a seat where concurrent requests can come. 
+ - then he does the payment and gets a ticket.
+
+entities:
+ - user
+ - city
+ - movies
+ - theatres
+ - shows
+ - seatmap for theatre
+ - tickets
+
+service functions:
+ - select city
+ - see list of movies
+ - select a movie and see list of theatres.
+ - select a theatre and see shows timings.
+ - select a show and see seatmap.
+ - select a seat in seatmap.
+ - do the payment and get a ticket
+
+think about design patterns: 
+ - 
